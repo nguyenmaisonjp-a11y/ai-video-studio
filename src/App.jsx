@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react'
-import { ResearchEngine, OutlineEngine } from './brain'
+import { ResearchEngine, OutlineEngine, ScriptEngine } from './brain'
 import { generateOutlineBrief } from './lib/outlineBrain.js'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { saveProject, loadProject, clearProject, saveCurrentStage, loadCurrentStage } from './utils/projectStorage.js'
+import { WorkflowEngine } from './workflow/workflowEngine.js'
+import { loadWorkflow, saveWorkflow, clearWorkflow } from './workflow/workflowStorage.js'
+import { WORKFLOW_STAGES } from './workflow/workflowConfig.js'
+import StudioSettings from './studio/StudioSettings.jsx'
+import { useStudioDNA } from './studio/useStudioDNA.js'
 import './App.css'
 
 function ProgressBar({ percent }) {
@@ -13,15 +18,32 @@ function ProgressBar({ percent }) {
   )
 }
 
+function normalizeWorkflow(workflow) {
+  if (!Array.isArray(workflow)) return null
+  if (workflow.length === 0) return null
+  const first = workflow[0]
+  if (first && first.id && first.label && first.status) {
+    return workflow
+  }
+  return WORKFLOW_STAGES.map((stage) => {
+    const match = workflow.find((item) => item.id === stage.id || item.name === stage.label || item.name === stage.id)
+    if (!match) return { ...stage, status: stage.id === 'idea' ? 'completed' : stage.id === 'research' ? 'active' : 'locked' }
+    return {
+      ...stage,
+      status: match.status === 'done' ? 'completed' : match.status === 'inprogress' ? 'active' : match.status === 'available' ? 'available' : match.status === 'completed' ? 'completed' : 'locked'
+    }
+  })
+}
+
 function WorkflowSidebar({ workflow }) {
   return (
     <aside className="sidebar">
       <nav>
         <ul>
           {workflow.map((s) => (
-            <li key={s.name} className={`wf-${s.status}`}>
-              <div className="wf-name">{s.name}</div>
-              <div className="wf-status">{s.status === 'done' ? 'Hoàn thành' : s.status === 'inprogress' ? 'Đang thực hiện' : 'Chưa bắt đầu'}</div>
+            <li key={s.id} className={`wf-${s.status}`}>
+              <div className="wf-name">{s.label}</div>
+              <div className="wf-status">{s.status === 'locked' ? 'Chưa mở khóa' : s.status === 'available' ? 'Sẵn sàng' : s.status === 'active' ? 'Đang thực hiện' : 'Hoàn thành'}</div>
             </li>
           ))}
         </ul>
@@ -89,9 +111,6 @@ function Wizard({ open, onClose, onCreate }) {
       style: data.style,
       audience: data.audience,
       emotions: data.emotions,
-      workflow: [
-        'Idea','Research','Outline','Script','Humanize','Voice Script','Storyboard','Image Prompt','Gemini Flow','Image Library','CapCut Package','Publish'
-      ].map((name, i) => ({ name, status: i === 0 ? 'done' : i === 1 ? 'inprogress' : 'todo' })),
       research: { goal: '', keyQuestions: '', sources: '', prompt: '', result: '', resultSaved: false },
       outline: { objective: '', coreArgument: '', mustInclude: '', avoid: '', prompt: '' }
     }
@@ -314,10 +333,14 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
   const [outline, setOutline] = useState(project.outline || { objective:'', coreArgument:'', mustInclude:'', avoid:'', prompt:'' })
   const [showFull, setShowFull] = useState(false)
   const [error, setError] = useState('')
+  const [outlineResultText, setOutlineResultText] = useState(project.outlineResult || '')
+  const [outlineSavedState, setOutlineSavedState] = useState(project.outlineSaved || false)
 
   useEffect(() => {
     setOutline(project.outline || { objective:'', coreArgument:'', mustInclude:'', avoid:'', prompt:'' })
     setError('')
+    setOutlineResultText(project.outlineResult || '')
+    setOutlineSavedState(project.outlineSaved || false)
   }, [project.outline])
 
   useEffect(() => {
@@ -361,6 +384,8 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
       const next = { ...outline, prompt }
       setOutline(next)
       onUpdateOutline(next)
+      // also persist generated prompt on project as generatedOutlinePrompt
+      try { project.generatedOutlinePrompt = prompt } catch (e) {}
       setError('')
     } catch (err) {
       setError(err.message || 'Không thể tạo Outline Prompt. Hãy kiểm tra lại thông tin.')
@@ -370,6 +395,35 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
   function copyPrompt() {
     if (!outline.prompt) return
     try { navigator.clipboard.writeText(outline.prompt) } catch (e) { }
+  }
+
+  function saveOutlineResult() {
+    if (outlineResultText.trim().length < 800) {
+      setError('Nội dung Outline phải có ít nhất 800 ký tự.')
+      return
+    }
+    setOutlineSavedState(true)
+    onUpdateOutline({ ...outline, outlineResult: outlineResultText, outlineSaved: true, generatedOutlinePrompt: outline.prompt })
+    if (typeof project.onSaveOutlineResult === 'function') {
+      project.onSaveOutlineResult({ outlineResult: outlineResultText, generatedOutlinePrompt: outline.prompt })
+    }
+    setError('')
+  }
+
+  function completeOutlineAndCreateScript() {
+    // allow parent to handle completion which validates length and transitions
+    if (outlineResultText.trim().length < 800) {
+      setError('Nội dung Outline phải có ít nhất 800 ký tự.')
+      return
+    }
+    onUpdateOutline({ ...outline, outlineResult: outlineResultText, outlineSaved: true, generatedOutlinePrompt: outline.prompt })
+    if (typeof project.onSaveOutlineResult === 'function') {
+      project.onSaveOutlineResult({ outlineResult: outlineResultText, generatedOutlinePrompt: outline.prompt })
+    }
+    // parent will perform completion and navigate
+    if (typeof project.onCompleteOutline === 'function') {
+      project.onCompleteOutline()
+    }
   }
 
   const researchText = project.research?.result || ''
@@ -422,8 +476,139 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
 
           <label>Generated Outline Prompt</label>
           <textarea className="prompt-output outline-prompt" value={outline.prompt} readOnly />
+
+          <div className="outline-result-panel">
+            <h3>Outline Result</h3>
+            <textarea
+              className="outline-result"
+              placeholder="Dán toàn bộ Outline từ Gemini vào đây..."
+              value={outlineResultText}
+              onChange={e => setOutlineResultText(e.target.value)}
+            />
+            <div className="result-footer">
+              <div className="char-count">{outlineResultText.length} ký tự</div>
+              {outlineSavedState && <div className="saved-status">Đã lưu kết quả Outline</div>}
+            </div>
+            {error && <div className="error-message">{error}</div>}
+            <div className="brief-actions">
+              <button className="btn" onClick={saveOutlineResult}>Lưu kết quả Outline</button>
+              <button className="btn primary" onClick={completeOutlineAndCreateScript}>Hoàn thành Outline và tạo Script</button>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onBackToOutline }) {
+  const [brief, setBrief] = useState(project.scriptBrief || {
+    scriptObjective: project.scriptObjective || project.dna?.storyStyle || 'Explain the core argument clearly',
+    narrationTone: project.narrationTone || project.dna?.narrationStyle || 'Calm, intelligent, evidence-based',
+    retentionStrategy: project.retentionStrategy || 'Start with a question and use curiosity gaps',
+    mustPreserve: project.mustPreserve || project.dna?.contentRules || '',
+    mustAvoid: project.mustAvoid || ''
+  })
+
+  const [outlinePreviewOpen, setOutlinePreviewOpen] = useState(false)
+  const [generatedPrompt, setGeneratedPrompt] = useState(project.generatedScriptPrompt || '')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setBrief(project.scriptBrief || {
+      scriptObjective: project.scriptObjective || project.dna?.storyStyle || 'Explain the core argument clearly',
+      narrationTone: project.narrationTone || project.dna?.narrationStyle || 'Calm, intelligent, evidence-based',
+      retentionStrategy: project.retentionStrategy || 'Start with a question and use curiosity gaps',
+      mustPreserve: project.mustPreserve || project.dna?.contentRules || '',
+      mustAvoid: project.mustAvoid || ''
+    })
+    setGeneratedPrompt(project.generatedScriptPrompt || '')
+  }, [project])
+
+  function updateField(field, value) {
+    const next = { ...brief, [field]: value }
+    setBrief(next)
+    onUpdateScriptBrief(next)
+  }
+
+  async function handleGeneratePrompt() {
+    try {
+      const prompt = ScriptEngine.generate({
+        topic: project.topic,
+        market: project.market,
+        language: project.language,
+        duration: project.duration,
+        style: project.style,
+        audience: project.audience,
+        emotions: project.emotions,
+        projectDNA: project.dna,
+        scriptObjective: brief.scriptObjective,
+        narrationTone: brief.narrationTone,
+        retentionStrategy: brief.retentionStrategy,
+        mustPreserve: brief.mustPreserve,
+        mustAvoid: brief.mustAvoid,
+        outlineResult: project.outlineResult || project.outline?.outlineResult || project.outline?.prompt || '',
+        researchResult: project.research?.result || ''
+      })
+      setGeneratedPrompt(prompt)
+      onGenerateScriptPrompt(prompt)
+      setError('')
+    } catch (err) {
+      setError(err.message || 'Không thể tạo Script Prompt. Hãy kiểm tra lại thông tin.')
+    }
+  }
+
+  function copyPrompt() {
+    if (!generatedPrompt) return
+    try { navigator.clipboard.writeText(generatedPrompt) } catch (e) { }
+  }
+
+  return (
+    <div className="script-view">
+      <div className="project-info">
+        <h2>{project.topic}</h2>
+        <div className="meta">{project.market} • {project.language} • {project.duration} • {project.style}</div>
+      </div>
+
+      <ProjectDNACard dna={project.dna} />
+
+      <div className="outline-summary">
+        <h3>Outline Summary</h3>
+        <div className="outline-preview">
+          { (project.outlineResult || project.outline?.prompt || '').slice(0,2000) }
+        </div>
+        <button className="btn" onClick={() => setOutlinePreviewOpen(!outlinePreviewOpen)}>{outlinePreviewOpen ? 'Thu gọn' : 'Xem toàn bộ Outline'}</button>
+        {outlinePreviewOpen && (
+          <div className="outline-full">
+            <pre>{project.outlineResult || project.outline?.prompt || ''}</pre>
+          </div>
+        )}
+      </div>
+
+      <div className="script-brief">
+        <h3>Script Brief</h3>
+        <label>Script objective</label>
+        <input value={brief.scriptObjective} onChange={e => updateField('scriptObjective', e.target.value)} />
+        <label>Narration tone</label>
+        <input value={brief.narrationTone} onChange={e => updateField('narrationTone', e.target.value)} />
+        <label>Retention strategy</label>
+        <input value={brief.retentionStrategy} onChange={e => updateField('retentionStrategy', e.target.value)} />
+        <label>Must preserve</label>
+        <textarea value={brief.mustPreserve} onChange={e => updateField('mustPreserve', e.target.value)} />
+        <label>Must avoid</label>
+        <textarea value={brief.mustAvoid} onChange={e => updateField('mustAvoid', e.target.value)} />
+      </div>
+
+      <div className="brief-actions">
+        <button className="btn primary" onClick={handleGeneratePrompt}>Tạo Script Prompt</button>
+        <button className="btn" onClick={copyPrompt}>Sao chép Script Prompt</button>
+        <button className="btn" onClick={() => window.open('https://gemini.google.com/app', '_blank')}>Mở Gemini</button>
+        <button className="btn ghost" onClick={onBackToOutline}>Quay lại Outline</button>
+      </div>
+
+      <label>Generated Script Prompt</label>
+      <textarea className="prompt-output script-prompt" value={generatedPrompt} readOnly style={{ minHeight: 480 }} />
+      {error && <div className="error-message">{error}</div>}
     </div>
   )
 }
@@ -443,8 +628,10 @@ export default function App() {
     const storedProject = loadProject()
     const storedStage = loadCurrentStage()
     const storedDNA = loadProjectDNA()
+    const storedWorkflow = loadWorkflow()
     if (storedProject && storedProject.id) {
-      const projectWithDNA = storedProject.dna ? storedProject : { ...storedProject, dna: storedDNA || createProjectDNA(storedProject) }
+      const workflow = normalizeWorkflow(Array.isArray(storedProject.workflow) ? storedProject.workflow : storedWorkflow || WorkflowEngine.createInitialWorkflow())
+      const projectWithDNA = storedProject.dna ? { ...storedProject, workflow } : { ...storedProject, workflow, dna: storedDNA || createProjectDNA(storedProject) }
       if (!projectWithDNA.dna) {
         projectWithDNA.dna = createProjectDNA(storedProject)
       }
@@ -453,6 +640,7 @@ export default function App() {
       if (!projectWithDNA.dna) {
         saveProjectDNA()
       }
+      saveWorkflow(workflow)
       setCurrentStage(storedStage)
       if (storedStage === 'outline') {
         setViewMode('outline')
@@ -480,7 +668,8 @@ export default function App() {
 
   function createProject(p) {
     const dna = createProjectDNA(p)
-    const projectWithDNA = { ...p, dna }
+    const workflow = WorkflowEngine.createInitialWorkflow()
+    const projectWithDNA = { ...p, dna, workflow }
     setProjects([projectWithDNA])
     setViewProjectId(projectWithDNA.id)
     setViewMode('research')
@@ -488,27 +677,106 @@ export default function App() {
     setWizardOpen(false)
     saveProject(projectWithDNA)
     saveProjectDNA()
+    saveWorkflow(workflow)
     saveCurrentStage('research')
   }
 
   function updateResearch(id, research) {
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, research } : p))
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, research } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
   }
 
   function updateOutline(id, outline) {
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, outline } : p))
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, outline } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveOutlineResult(id, outlinePayload) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...{ outlineResult: outlinePayload.outlineResult, outlineSaved: true, generatedOutlinePrompt: outlinePayload.generatedOutlinePrompt } } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function completeOutline(id) {
+    const project = projects.find(p => p.id === id)
+    if (!project) return
+    const outlineText = project.outlineResult || project.outline?.outlineResult || project.outline?.result || ''
+    if (outlineText.trim().length < 800) {
+      setMessage('Nội dung Outline phải có ít nhất 800 ký tự.')
+      return
+    }
+
+    // Save outline completed timestamp
+    const completedAt = Date.now()
+
+    // Mark outline stage completed
+    const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(project.workflow, 'outline')
+    if (completeError) {
+      setMessage(completeError)
+      return
+    }
+
+    // Enter script stage
+    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'script', project)
+    if (enterError) {
+      setMessage(enterError)
+      return
+    }
+
+    // Persist project updates and workflow
+    const nextProject = { ...project, outlineSaved: true, outlineResult: outlineText, outlineCompletedAt: completedAt, workflow: nextWorkflow }
+    setProjects([nextProject])
+    saveProject(nextProject)
+    saveWorkflow(nextWorkflow)
+    setCurrentStage('script')
+    setViewMode('script')
+    setMessage('')
+  }
+
+  function updateScriptBrief(id, brief) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, scriptBrief: brief, scriptObjective: brief.scriptObjective, narrationTone: brief.narrationTone, retentionStrategy: brief.retentionStrategy, mustPreserve: brief.mustPreserve, mustAvoid: brief.mustAvoid } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveGeneratedScriptPrompt(id, prompt) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, generatedScriptPrompt: prompt } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
   }
 
   function completeResearch(id) {
     setProjects(prev => prev.map(p => {
       if (p.id !== id) return p
-      const workflow = p.workflow.map((step) => {
-        if (step.name === 'Idea') return { ...step, status: 'done' }
-        if (step.name === 'Research') return { ...step, status: 'done' }
-        if (step.name === 'Outline') return { ...step, status: 'inprogress' }
-        return { ...step, status: 'todo' }
-      })
-      return { ...p, workflow }
+      const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(p.workflow, 'research')
+      if (completeError) {
+        setMessage(completeError)
+        return p
+      }
+      const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'outline', p)
+      if (enterError) {
+        setMessage(enterError)
+        return { ...p, workflow: completedWorkflow }
+      }
+      saveWorkflow(nextWorkflow)
+      return { ...p, workflow: nextWorkflow }
     }))
     setViewMode('outline')
     setCurrentStage('outline')
@@ -521,7 +789,7 @@ export default function App() {
     market: 'Nhật Bản',
     duration: '15 phút'
   }
-  const progressPercent = activeProject ? Math.round((activeProject.workflow.filter(s => s.status === 'done').length / activeProject.workflow.length) * 100) : 17
+  const progressPercent = activeProject ? WorkflowEngine.getProgress(activeProject.workflow) : 17
 
   function handleOpenDashboard() {
     setViewMode('dashboard')
@@ -533,22 +801,31 @@ export default function App() {
       setMessage('Tạo dự án mới để bắt đầu Research.')
       return
     }
+    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'research', activeProject)
+    if (error) {
+      setMessage(error)
+      return
+    }
+    setProjects([{ ...activeProject, workflow: nextWorkflow }])
     setViewProjectId(activeProject.id)
     setViewMode('research')
     setCurrentStage('research')
+    saveWorkflow(nextWorkflow)
     setMessage('')
   }
 
   function handleOpenOutline() {
     if (!activeProject) return
-    const researchDone = activeProject.research?.resultSaved && activeProject.research?.result?.trim().length >= 500
-    if (!researchDone) {
-      setMessage('Outline chỉ mở sau khi Research đã hoàn thành và lưu kết quả.')
+    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'outline', activeProject)
+    if (error) {
+      setMessage(error)
       return
     }
+    setProjects([{ ...activeProject, workflow: nextWorkflow }])
     setViewProjectId(activeProject.id)
     setViewMode('outline')
     setCurrentStage('outline')
+    saveWorkflow(nextWorkflow)
     setMessage('')
   }
 
@@ -567,12 +844,14 @@ export default function App() {
 
   function handleResetProject() {
     if (!activeProject) return
-    const confirmed = window.confirm('Bạn có chắc muốn xóa dự án hiện tại không? Hành động này sẽ giữ lại dự án mới nhưng xóa trạng thái hiện tại.')
+    const confirmed = window.confirm('Bạn có chắc muốn xóa dự án hiện tại không? Hành động này sẽ xóa dữ liệu hiện tại trong trình duyệt.')
     if (!confirmed) return
     clearProject()
+    clearWorkflow()
     setProjects([])
     setViewProjectId(null)
     setViewMode('dashboard')
+    setCurrentStage(null)
     setMessage('Dự án đã được xóa. Quay về Dashboard.')
   }
 
@@ -588,6 +867,7 @@ export default function App() {
         </div>
         <div className="top-actions">
           <button className="btn new" onClick={openWizard}>Dự án mới</button>
+          <button className="btn" onClick={() => setViewMode('studio')}>Studio Settings</button>
           {activeProject && (
             <>
               <button className="btn ghost" onClick={handleOpenDashboard}>Về Dashboard</button>
@@ -637,19 +917,20 @@ export default function App() {
               <section className="workflow">
                 <h2>Workflow</h2>
                 <div className="steps">
-                  {['Idea','Research','Outline','Script','Humanize','Voice Script','Storyboard','Image Prompt','Gemini Flow','Image Library','CapCut Package','Publish'].map((label,i)=> {
-                    const action = label === 'Research' ? handleOpenResearch : label === 'Outline' ? handleOpenOutline : undefined
-                    const disabled = label === 'Outline' && !outlineUnlocked
+                  {activeProject?.workflow?.map((stage, i) => {
+                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : undefined
+                    const disabled = stage.id === 'outline' && !outlineUnlocked
+                    const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (
                       <div
-                        key={label}
-                        className={`step ${i===0? 'done': i===1? 'inprogress':'todo'} ${action ? 'clickable' : ''} ${disabled ? 'disabled' : ''}`}
+                        key={stage.id || label}
+                        className={`step ${stage.status === 'completed' ? 'done' : stage.status === 'active' ? 'inprogress' : 'todo'} ${action ? 'clickable' : ''} ${disabled ? 'disabled' : ''}`}
                         onClick={disabled ? undefined : action}
                       >
-                        <div className="step-index">{i+1}</div>
+                        <div className="step-index">{i + 1}</div>
                         <div className="step-body">
                           <div className="step-label">{label}</div>
-                          <div className="step-status">{i===0? 'Hoàn thành': i===1? 'Đang thực hiện':'Chưa bắt đầu'}</div>
+                          <div className="step-status">{stage.status === 'completed' ? 'Hoàn thành' : stage.status === 'active' ? 'Đang thực hiện' : stage.status === 'available' ? 'Sẵn sàng' : 'Chưa mở khóa'}</div>
                         </div>
                       </div>
                     )
@@ -664,7 +945,23 @@ export default function App() {
           )}
 
           {activeProject && viewMode === 'outline' && (
-            <OutlineView project={activeProject} onUpdateOutline={(outline)=>updateOutline(activeProject.id, outline)} onBackToResearch={() => { setViewMode('research'); setCurrentStage('research') }} />
+            <OutlineView
+              project={{ ...activeProject, onCompleteOutline: () => completeOutline(activeProject.id), onSaveOutlineResult: (payload) => saveOutlineResult(activeProject.id, payload) }}
+              onUpdateOutline={(outline)=> { updateOutline(activeProject.id, outline); }}
+              onBackToResearch={() => { setViewMode('research'); setCurrentStage('research') }}
+            />
+          )}
+
+          {activeProject && viewMode === 'script' && (
+            <ScriptView
+              project={activeProject}
+              onUpdateScriptBrief={(brief) => updateScriptBrief(activeProject.id, brief)}
+              onGenerateScriptPrompt={(prompt) => saveGeneratedScriptPrompt(activeProject.id, prompt)}
+              onBackToOutline={() => { setViewMode('outline'); setCurrentStage('outline') }}
+            />
+          )}
+          {viewMode === 'studio' && (
+            <StudioSettings />
           )}
         </main>
       </div>
