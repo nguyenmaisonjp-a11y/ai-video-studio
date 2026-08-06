@@ -1,0 +1,112 @@
+.app-root {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-pill {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(163,112,255,0.12), rgba(255,106,163,0.08));
+  color: white;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.brand-text .product {
+  color: var(--text-h);
+  font-size: 16px;
+  font-weight: 600;
+}
+.brand-text .sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.top-actions .btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-h);
+}
+.top-actions .btn.new {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 0 6px 18px rgba(163,112,255,0.12);
+}
+
+.layout {
+  display: flex;
+  gap: 24px;
+  padding: 28px;
+}
+
+.sidebar {
+  width: 220px;
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 18px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.sidebar ul { list-style: none; padding: 0; margin: 8px 0 0; }
+.sidebar li { padding: 12px 10px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+.sidebar li.active, .sidebar li:hover { background: rgba(255,255,255,0.02); color: var(--text-h); }
+
+.main { flex: 1; }
+.main-header { margin-bottom: 20px; }
+.main-header h1 { color: var(--text-h); margin: 0 0 6px; }
+.lead { color: var(--muted); margin: 0 0 18px; }
+
+.projects { margin-bottom: 24px; }
+.project-card { background: var(--panel); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+.project-card .card-row { display:flex; align-items:center; justify-content:space-between; gap:12px }
+.project-title { font-weight:600; color:var(--text-h) }
+.project-meta { color:var(--muted); font-size:13px }
+.percent { color:var(--text-h); width:48px; text-align:right }
+
+.progress { height:10px; background: rgba(255,255,255,0.04); border-radius:999px; position:relative; flex:1; margin-right:12px; overflow:hidden }
+.progress-fill { height:100%; background: linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:999px; transition: width 0.6s ease }
+
+.workflow h2 { color: var(--text-h); margin: 0 0 12px }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap:12px }
+.step { background: var(--panel); padding:12px; border-radius:10px; display:flex; gap:12px; align-items:center }
+.step .step-index { width:34px; height:34px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-weight:600; background: rgba(255,255,255,0.03); color:var(--text-h) }
+.step .step-label { font-weight:600; color:var(--text-h) }
+.step .step-status { font-size:12px; color:var(--muted) }
+.step.done { border:1px solid rgba(163,112,255,0.35) }
+.step.inprogress { box-shadow: 0 6px 18px rgba(255,106,163,0.06); border:1px solid rgba(255,106,163,0.14) }
+
+@media (max-width: 1024px) {
+  .layout { flex-direction: column; padding: 18px }
+  .sidebar { width: 100%; display:flex }
+  .steps { grid-template-columns: repeat(2, 1fr) }
+  .topbar { padding: 14px }
+}
+
+.step.todo { opacity: 0.85 }
+
+.btn:hover { transform: translateY(-1px); transition: transform 0.12s ease }
+
