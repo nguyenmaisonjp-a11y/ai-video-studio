@@ -82,10 +82,16 @@
 
 .projects { margin-bottom: 24px; }
 .project-card { background: var(--panel); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+.project-card.clickable { cursor: pointer; transition: transform 0.18s ease, border-color 0.18s ease; }
+.project-card.clickable:hover { transform: translateY(-2px); border-color: rgba(163,112,255,0.2); }
 .project-card .card-row { display:flex; align-items:center; justify-content:space-between; gap:12px }
 .project-title { font-weight:600; color:var(--text-h) }
 .project-meta { color:var(--muted); font-size:13px }
 .percent { color:var(--text-h); width:48px; text-align:right }
+.step.clickable { cursor: pointer; }
+.step.clickable:hover { background: rgba(255,255,255,0.05); }
+.step.disabled { opacity: 0.5; cursor: not-allowed; }
+.global-message { margin-bottom: 18px; padding: 14px 16px; border-radius: 12px; background: rgba(255,106,163,0.1); color: var(--text-h); border: 1px solid rgba(255,106,163,0.22); }
 
 .progress { height:10px; background: rgba(255,255,255,0.04); border-radius:999px; position:relative; flex:1; margin-right:12px; overflow:hidden }
 .progress-fill { height:100%; background: linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:999px; transition: width 0.6s ease }
@@ -142,10 +148,30 @@
 .project-info { flex:1; background:var(--panel); padding:18px; border-radius:12px }
 .research-brief { flex:1.3; background:var(--panel); padding:18px; border-radius:12px; display:flex; flex-direction:column; gap:12px }
 .research-brief label { color:var(--text-h); font-size:14px; font-weight:600 }
-.research-brief input, .research-brief textarea { width:100%; padding:12px; border-radius:10px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:var(--text); resize:vertical }
+.research-brief input, .research-brief textarea { width:100%; padding:14px; min-height:48px; border-radius:10px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:var(--text); resize:vertical }
+.research-brief textarea { min-height:180px }
 .research-brief input:focus, .research-brief textarea:focus { outline: none; box-shadow: 0 0 0 4px rgba(163,112,255,0.12); border-color: var(--accent) }
 .brief-actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center }
 .prompt-output { min-height:260px; font-family:var(--mono); padding:12px }
+.research-result-panel { display:flex; flex-direction:column; gap:12px; padding:16px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:14px; }
+.research-result-panel h3 { margin:0; color: var(--text-h) }
+.research-result { min-height:420px; width:100%; padding:14px; border-radius:10px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:var(--text); resize:vertical }
+.result-footer { display:flex; justify-content:space-between; gap:10px; color:var(--muted); font-size:13px }
+.saved-status { color: var(--accent2); }
+.error-message { color: #ff8aa7; font-size:13px }
+
+.outline-view { display:flex; gap:20px }
+.outline-info { flex:1; background:var(--panel); padding:18px; border-radius:12px; display:flex; flex-direction:column; gap:12px }
+.outline-info h3 { margin:0 0 12px }
+.meta-row { display:flex; justify-content:space-between; color:var(--text); font-size:14px; border-bottom:1px solid rgba(255,255,255,0.05); padding:10px 0 }
+.outline-main { flex:2; display:flex; flex-direction:column; gap:18px }
+.outline-summary-panel, .outline-brief { background:var(--panel); padding:18px; border-radius:14px; border:1px solid rgba(255,255,255,0.04); display:flex; flex-direction:column; gap:14px }
+.summary-header { display:flex; justify-content:space-between; align-items:center; gap:12px }
+.summary-header h3 { margin:0 }
+.summary-text { min-height:180px; padding:14px; background: rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.03); color:var(--text); white-space: pre-wrap; overflow:auto }
+.outline-brief label { color:var(--text-h); font-size:14px; font-weight:600 }
+.outline-brief textarea { width:100%; min-height:110px; padding:14px; border-radius:10px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:var(--text); resize:vertical }
+.outline-prompt { min-height:420px }
 
 /* Sidebar workflow statuses */
 .sidebar li .wf-name { font-weight:600; color:var(--text-h) }
@@ -155,6 +181,46 @@
 .sidebar li.wf-todo { background: transparent; border:1px solid rgba(255,255,255,0.02) }
 
 @media (max-width: 1024px) {
-  .research-view { flex-direction:column }
+  .research-view, .outline-view { flex-direction:column }
+  .research-result-panel, .outline-info, .outline-main, .outline-summary-panel, .outline-brief { width:100% }
+  .research-result-panel { padding: 14px }
+}
+
+.project-dna-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 18px 0;
+}
+.project-dna-card h3 {
+  margin: 0 0 12px;
+  color: var(--text-h);
+}
+.dna-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.dna-item {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 12px;
+}
+.dna-key {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.dna-value pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
 }
 
