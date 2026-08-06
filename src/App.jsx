@@ -587,16 +587,30 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onBa
 
       <div className="script-brief">
         <h3>Script Brief</h3>
-        <label>Script objective</label>
-        <input value={brief.scriptObjective} onChange={e => updateField('scriptObjective', e.target.value)} />
-        <label>Narration tone</label>
-        <input value={brief.narrationTone} onChange={e => updateField('narrationTone', e.target.value)} />
-        <label>Retention strategy</label>
-        <input value={brief.retentionStrategy} onChange={e => updateField('retentionStrategy', e.target.value)} />
-        <label>Must preserve</label>
-        <textarea value={brief.mustPreserve} onChange={e => updateField('mustPreserve', e.target.value)} />
-        <label>Must avoid</label>
-        <textarea value={brief.mustAvoid} onChange={e => updateField('mustAvoid', e.target.value)} />
+        <div className="script-brief-grid">
+          <div className="field-group">
+            <label>Script objective</label>
+            <input value={brief.scriptObjective} onChange={e => updateField('scriptObjective', e.target.value)} />
+          </div>
+          <div className="field-group">
+            <label>Narration tone</label>
+            <input value={brief.narrationTone} onChange={e => updateField('narrationTone', e.target.value)} />
+          </div>
+          <div className="field-group">
+            <label>Retention strategy</label>
+            <input value={brief.retentionStrategy} onChange={e => updateField('retentionStrategy', e.target.value)} />
+          </div>
+        </div>
+        <div className="script-brief-grid two-column">
+          <div className="field-group">
+            <label>Must preserve</label>
+            <textarea value={brief.mustPreserve} onChange={e => updateField('mustPreserve', e.target.value)} />
+          </div>
+          <div className="field-group">
+            <label>Must avoid</label>
+            <textarea value={brief.mustAvoid} onChange={e => updateField('mustAvoid', e.target.value)} />
+          </div>
+        </div>
       </div>
 
       <div className="brief-actions">
@@ -646,6 +660,8 @@ export default function App() {
         setViewMode('outline')
       } else if (storedStage === 'research') {
         setViewMode('research')
+      } else if (storedStage === 'script') {
+        setViewMode('script')
       } else {
         setViewMode('dashboard')
       }
@@ -829,15 +845,34 @@ export default function App() {
     setMessage('')
   }
 
+  function handleOpenScript() {
+    if (!activeProject) return
+    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'script', activeProject)
+    if (error) {
+      setMessage(error)
+      return
+    }
+    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    setViewProjectId(activeProject.id)
+    setViewMode('script')
+    setCurrentStage('script')
+    saveWorkflow(nextWorkflow)
+    setMessage('')
+  }
+
   function handleOpenProjectCard() {
     if (!activeProject) {
       setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
       return
     }
-    if (currentStage === 'outline') {
+    if (currentStage === 'script') {
+      setViewMode('script')
+    } else if (currentStage === 'outline') {
       setViewMode('outline')
-    } else {
+    } else if (currentStage === 'research') {
       setViewMode('research')
+    } else {
+      setViewMode('dashboard')
     }
     setMessage('')
   }
@@ -918,7 +953,7 @@ export default function App() {
                 <h2>Workflow</h2>
                 <div className="steps">
                   {activeProject?.workflow?.map((stage, i) => {
-                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : undefined
+                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (

@@ -224,3 +224,31 @@
   font-size: 13px;
 }
 
+/* Script View Styles */
+.script-view { display:flex; flex-direction:column; gap:18px; }
+.script-view .project-info { background: var(--panel); padding:18px; border-radius:16px; border:1px solid rgba(255,255,255,0.05); }
+.script-view .project-info h2 { margin:0 0 10px; }
+.script-view .project-info .meta { color: var(--muted); font-size:14px; line-height:1.6; }
+.script-brief { background: var(--panel); padding: 18px; border-radius: 16px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:18px; }
+.script-brief h3 { margin: 0 0 4px; color: var(--text-h); }
+.script-brief-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 16px; }
+.script-brief-grid.two-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.field-group { display:flex; flex-direction:column; gap:10px; }
+.field-group label { color: var(--text-h); font-size:14px; font-weight:600; }
+.field-group input, .field-group textarea { width:100%; box-sizing:border-box; padding:14px; border-radius:12px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); color: var(--text); resize:vertical; }
+.field-group input { min-height: 48px; }
+.field-group textarea { min-height: 140px; font-family: var(--sans); }
+.field-group input:focus, .field-group textarea:focus { outline: none; box-shadow: 0 0 0 4px rgba(163,112,255,0.12); border-color: var(--accent); }
+.brief-actions { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:0; }
+.brief-actions .btn { min-width: 140px; }
+.script-prompt { width: 100%; min-height:480px; font-family: var(--mono); background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); border-radius:12px; color:var(--text); resize:vertical; }
+.outline-summary { background: var(--panel); padding: 18px; border-radius: 16px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:14px; }
+.outline-preview { min-height: 140px; max-height: 280px; overflow:auto; padding:14px; background: rgba(255,255,255,0.02); border-radius:12px; border:1px solid rgba(255,255,255,0.04); color:var(--text); white-space: pre-wrap; }
+.outline-full { max-height: 360px; overflow:auto; padding:14px; background: rgba(255,255,255,0.03); border-radius:12px; border:1px solid rgba(255,255,255,0.05); }
+.outline-full pre { margin:0; white-space: pre-wrap; word-break: break-word; font-family: var(--mono); color: var(--text); }
+@media (min-width: 1024px) {
+  .script-brief-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .script-brief-grid.two-column { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
