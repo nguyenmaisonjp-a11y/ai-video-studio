@@ -501,7 +501,7 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
   )
 }
 
-function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onBackToOutline }) {
+function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onUpdateScriptResult, onSaveScript, onCompleteScript, onBackToOutline }) {
   const [brief, setBrief] = useState(project.scriptBrief || {
     scriptObjective: project.scriptObjective || project.dna?.storyStyle || 'Explain the core argument clearly',
     narrationTone: project.narrationTone || project.dna?.narrationStyle || 'Calm, intelligent, evidence-based',
@@ -512,6 +512,7 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onBa
 
   const [outlinePreviewOpen, setOutlinePreviewOpen] = useState(false)
   const [generatedPrompt, setGeneratedPrompt] = useState(project.generatedScriptPrompt || '')
+  const [scriptResult, setScriptResult] = useState(project.scriptResult || '')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -523,12 +524,19 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onBa
       mustAvoid: project.mustAvoid || ''
     })
     setGeneratedPrompt(project.generatedScriptPrompt || '')
+    setScriptResult(project.scriptResult || '')
   }, [project])
 
   function updateField(field, value) {
     const next = { ...brief, [field]: value }
     setBrief(next)
     onUpdateScriptBrief(next)
+  }
+
+  function updateScriptText(value) {
+    setScriptResult(value)
+    setError('')
+    onUpdateScriptResult(value)
   }
 
   async function handleGeneratePrompt() {
@@ -622,7 +630,28 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onBa
 
       <label>Generated Script Prompt</label>
       <textarea className="prompt-output script-prompt" value={generatedPrompt} readOnly style={{ minHeight: 480 }} />
-      {error && <div className="error-message">{error}</div>}
+
+      <div className="script-result-panel">
+        <h3>SCRIPT RESULT</h3>
+        <textarea
+          className="script-result"
+          placeholder="Dán toàn bộ Script từ Gemini vào đây..."
+          value={scriptResult}
+          onChange={e => updateScriptText(e.target.value)}
+        />
+        <div className="result-footer">
+          <div className="char-count">{scriptResult.length} ký tự</div>
+          {project.scriptSaved && <div className="saved-status">Đã lưu</div>}
+        </div>
+        <div className="brief-actions">
+          <button className="btn" onClick={() => { onSaveScript(); }}>Lưu Script</button>
+          <button className="btn primary" onClick={() => {
+            const toast = onCompleteScript()
+            if (toast) setError(toast)
+          }}>Complete Script & Unlock Humanize</button>
+        </div>
+        {error && <div className="error-message">{error}</div>}
+      </div>
     </div>
   )
 }
@@ -662,6 +691,8 @@ export default function App() {
         setViewMode('research')
       } else if (storedStage === 'script') {
         setViewMode('script')
+      } else if (storedStage === 'humanize') {
+        setViewMode('humanize')
       } else {
         setViewMode('dashboard')
       }
@@ -769,6 +800,54 @@ export default function App() {
     })
   }
 
+  function updateScriptResult(id, scriptResult) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, scriptResult, scriptSaved: false } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveScript(id) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, scriptSaved: true } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+    setCurrentStage('script')
+    setMessage('Script đã được lưu vào bộ nhớ.')
+  }
+
+  function completeScript(id) {
+    const project = projects.find(p => p.id === id)
+    if (!project) return 'Không tìm thấy dự án.'
+    const scriptText = project.scriptResult || ''
+    if (scriptText.trim().length < 3000) {
+      return 'Vui lòng dán toàn bộ Script trước.'
+    }
+
+    const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(project.workflow, 'script')
+    if (completeError) {
+      return completeError
+    }
+
+    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'humanize', project)
+    if (enterError) {
+      return enterError
+    }
+
+    const nextProject = { ...project, scriptSaved: true, workflow: nextWorkflow }
+    setProjects([nextProject])
+    saveProject(nextProject)
+    saveWorkflow(nextWorkflow)
+    setCurrentStage('humanize')
+    setViewMode('humanize')
+    setMessage('Script hoàn thành. Humanize đã được mở khóa.')
+    return null
+  }
+
   function saveGeneratedScriptPrompt(id, prompt) {
     setProjects(prev => {
       const next = prev.map(p => p.id === id ? { ...p, generatedScriptPrompt: prompt } : p)
@@ -860,6 +939,21 @@ export default function App() {
     setMessage('')
   }
 
+  function handleOpenHumanize() {
+    if (!activeProject) return
+    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'humanize', activeProject)
+    if (error) {
+      setMessage(error)
+      return
+    }
+    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    setViewProjectId(activeProject.id)
+    setViewMode('humanize')
+    setCurrentStage('humanize')
+    saveWorkflow(nextWorkflow)
+    setMessage('')
+  }
+
   function handleOpenProjectCard() {
     if (!activeProject) {
       setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
@@ -867,6 +961,8 @@ export default function App() {
     }
     if (currentStage === 'script') {
       setViewMode('script')
+    } else if (currentStage === 'humanize') {
+      setViewMode('humanize')
     } else if (currentStage === 'outline') {
       setViewMode('outline')
     } else if (currentStage === 'research') {
@@ -953,7 +1049,7 @@ export default function App() {
                 <h2>Workflow</h2>
                 <div className="steps">
                   {activeProject?.workflow?.map((stage, i) => {
-                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : undefined
+                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : stage.id === 'humanize' ? handleOpenHumanize : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (
@@ -991,12 +1087,27 @@ export default function App() {
             <ScriptView
               project={activeProject}
               onUpdateScriptBrief={(brief) => updateScriptBrief(activeProject.id, brief)}
+              onUpdateScriptResult={(scriptResult) => updateScriptResult(activeProject.id, scriptResult)}
+              onSaveScript={() => saveScript(activeProject.id)}
+              onCompleteScript={() => completeScript(activeProject.id)}
               onGenerateScriptPrompt={(prompt) => saveGeneratedScriptPrompt(activeProject.id, prompt)}
               onBackToOutline={() => { setViewMode('outline'); setCurrentStage('outline') }}
             />
           )}
           {viewMode === 'studio' && (
             <StudioSettings />
+          )}
+          {activeProject && viewMode === 'humanize' && (
+            <div className="humanize-view">
+              <div className="project-info">
+                <h2>Humanize</h2>
+                <div className="meta">Humanize stage is now unlocked.</div>
+              </div>
+              <div className="outline-summary">
+                <h3>Ready for Humanize</h3>
+                <p>Script đã hoàn tất và Humanize được mở khóa. Tiếp tục thực hiện giai đoạn Humanize.</p>
+              </div>
+            </div>
           )}
         </main>
       </div>
