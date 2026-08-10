@@ -1,3 +1,5 @@
 export { ResearchEngine } from './engines/researchEngine.js'
 export { OutlineEngine } from './engines/outlineEngine.js'
 export { ScriptEngine } from './engines/scriptEngine.js'
+export { HumanizeEngine } from './engines/humanizeEngine.js'
+export { StoryboardEngine } from './engines/storyboardEngine.js'

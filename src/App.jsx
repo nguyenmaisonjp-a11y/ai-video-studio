@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ResearchEngine, OutlineEngine, ScriptEngine } from './brain'
+import { ResearchEngine, OutlineEngine, ScriptEngine, HumanizeEngine, StoryboardEngine } from './brain'
 import { generateOutlineBrief } from './lib/outlineBrain.js'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { saveProject, loadProject, clearProject, saveCurrentStage, loadCurrentStage } from './utils/projectStorage.js'
@@ -33,6 +33,25 @@ function normalizeWorkflow(workflow) {
       status: match.status === 'done' ? 'completed' : match.status === 'inprogress' ? 'active' : match.status === 'available' ? 'available' : match.status === 'completed' ? 'completed' : 'locked'
     }
   })
+}
+
+function ensureStoryboardFields(project) {
+  return {
+    ...project,
+    humanizeObjective: project.humanizeObjective || '',
+    naturalnessLevel: project.naturalnessLevel || '',
+    narrationRhythm: project.narrationRhythm || '',
+    retentionStyle: project.retentionStyle || '',
+    humanizeMustPreserve: project.humanizeMustPreserve || '',
+    humanizeMustAvoid: project.humanizeMustAvoid || '',
+    generatedHumanizePrompt: project.generatedHumanizePrompt || '',
+    humanizedScriptResult: project.humanizedScriptResult || '',
+    humanizedScriptSaved: project.humanizedScriptSaved || false,
+    generatedStoryboardPrompt: project.generatedStoryboardPrompt || '',
+    rawStoryboardResult: project.rawStoryboardResult || '',
+    storyboardScenes: Array.isArray(project.storyboardScenes) ? project.storyboardScenes : [],
+    storyboardSaved: project.storyboardSaved || false
+  }
 }
 
 function WorkflowSidebar({ workflow }) {
@@ -656,6 +675,326 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onUp
   )
 }
 
+function HumanizeView({ project, studioDNA, onUpdateHumanizedScript, onUpdateHumanizeSettings, onSaveHumanizedScript, onSaveGeneratedHumanizePrompt, onCompleteHumanize, onBackToScript, onBackToDashboard }) {
+  const [text, setText] = useState(project.humanizedScriptResult || '')
+  const [saved, setSaved] = useState(project.humanizedScriptSaved || false)
+  const [showFullScript, setShowFullScript] = useState(false)
+  const [generatedPrompt, setGeneratedPrompt] = useState(project.generatedHumanizePrompt || '')
+  const [objective, setObjective] = useState(project.humanizeObjective || 'Make the script sound natural, spoken, intelligent and human.')
+  const [naturalnessLevel, setNaturalnessLevel] = useState(project.naturalnessLevel || 'High')
+  const [narrationRhythm, setNarrationRhythm] = useState(project.narrationRhythm || 'Calm with sentence-length variation')
+  const [retentionStyle, setRetentionStyle] = useState(project.retentionStyle || 'Curiosity, contrast, rhetorical questions, smooth transitions')
+  const [mustPreserve, setMustPreserve] = useState(project.humanizeMustPreserve || 'Facts, statistics, source meaning, neutrality, core argument')
+  const [mustAvoid, setMustAvoid] = useState(project.humanizeMustAvoid || 'AI-sounding phrases, repetition, exaggerated emotion, invented facts')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setText(project.humanizedScriptResult || '')
+    setSaved(project.humanizedScriptSaved || false)
+    setGeneratedPrompt(project.generatedHumanizePrompt || '')
+    setObjective(project.humanizeObjective || 'Make the script sound natural, spoken, intelligent and human.')
+    setNaturalnessLevel(project.naturalnessLevel || 'High')
+    setNarrationRhythm(project.narrationRhythm || 'Calm with sentence-length variation')
+    setRetentionStyle(project.retentionStyle || 'Curiosity, contrast, rhetorical questions, smooth transitions')
+    setMustPreserve(project.humanizeMustPreserve || 'Facts, statistics, source meaning, neutrality, core argument')
+    setMustAvoid(project.humanizeMustAvoid || 'AI-sounding phrases, repetition, exaggerated emotion, invented facts')
+  }, [project.humanizedScriptResult, project.humanizedScriptSaved, project.generatedHumanizePrompt, project.humanizeObjective, project.naturalnessLevel, project.narrationRhythm, project.retentionStyle, project.humanizeMustPreserve, project.humanizeMustAvoid])
+
+  function updateText(value) {
+    setText(value)
+    setError('')
+    onUpdateHumanizedScript(value)
+  }
+
+  function updateField(field, value) {
+    const next = {
+      humanizeObjective: field === 'objective' ? value : objective,
+      naturalnessLevel: field === 'naturalnessLevel' ? value : naturalnessLevel,
+      narrationRhythm: field === 'narrationRhythm' ? value : narrationRhythm,
+      retentionStyle: field === 'retentionStyle' ? value : retentionStyle,
+      humanizeMustPreserve: field === 'mustPreserve' ? value : mustPreserve,
+      humanizeMustAvoid: field === 'mustAvoid' ? value : mustAvoid
+    }
+    setObjective(next.humanizeObjective)
+    setNaturalnessLevel(next.naturalnessLevel)
+    setNarrationRhythm(next.narrationRhythm)
+    setRetentionStyle(next.retentionStyle)
+    setMustPreserve(next.humanizeMustPreserve)
+    setMustAvoid(next.humanizeMustAvoid)
+    onUpdateHumanizeSettings(next)
+  }
+
+  function generatePrompt() {
+    try {
+      const prompt = HumanizeEngine.generate({
+        topic: project.topic,
+        language: project.language,
+        audience: project.audience,
+        duration: project.duration,
+        projectDNA: project.dna,
+        studioDNA,
+        scriptResult: project.scriptResult || '',
+        humanizeObjective: objective,
+        naturalnessLevel,
+        narrationRhythm,
+        retentionStyle,
+        mustPreserve,
+        mustAvoid
+      })
+      setGeneratedPrompt(prompt)
+      onSaveGeneratedHumanizePrompt(prompt)
+      setError('')
+    } catch (err) {
+      setError(err.message || 'Không thể tạo Humanize Prompt. Hãy kiểm tra lại thông tin.')
+    }
+  }
+
+  function copyPrompt() {
+    if (!generatedPrompt) return
+    try { navigator.clipboard.writeText(generatedPrompt) } catch (e) {}
+  }
+
+  function openGemini() {
+    window.open('https://gemini.google.com/app', '_blank')
+  }
+
+  function saveText() {
+    if (text.trim().length < 3000) {
+      setError('Humanized Script phải có ít nhất 3000 ký tự.')
+      return
+    }
+    onSaveHumanizedScript()
+    setSaved(true)
+    setError('')
+  }
+
+  function complete() {
+    const result = onCompleteHumanize()
+    if (result) {
+      setError(result)
+    }
+  }
+
+  const originalScript = project.scriptResult || 'Không có Script gốc để xem.'
+
+  return (
+    <div className="humanize-view">
+      <div className="project-info">
+        <h2>{project.topic}</h2>
+        <div className="meta">Humanize stage</div>
+        <div className="meta">{project.market} • {project.language} • {project.duration} • {project.style}</div>
+      </div>
+
+      <ProjectDNACard dna={project.dna} />
+
+      <div className="humanize-panel">
+        <h3>Original Script</h3>
+        <div className="outline-summary">
+          <div className="outline-preview">{originalScript.slice(0, 1800)}</div>
+          <button className="btn ghost" onClick={() => setShowFullScript(!showFullScript)}>{showFullScript ? 'Thu gọn Script' : 'Xem toàn bộ Script'}</button>
+          {showFullScript && (
+            <div className="outline-full"><pre>{originalScript}</pre></div>
+          )}
+        </div>
+
+        <div className="humanize-brief">
+          <h3>Humanize Brief</h3>
+          <div className="script-brief-grid">
+            <div className="field-group">
+              <label>Humanize objective</label>
+              <textarea value={objective} onChange={e => updateField('objective', e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label>Naturalness level</label>
+              <input value={naturalnessLevel} onChange={e => updateField('naturalnessLevel', e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label>Narration rhythm</label>
+              <input value={narrationRhythm} onChange={e => updateField('narrationRhythm', e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label>Retention style</label>
+              <textarea value={retentionStyle} onChange={e => updateField('retentionStyle', e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label>Must preserve</label>
+              <textarea value={mustPreserve} onChange={e => updateField('mustPreserve', e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label>Must avoid</label>
+              <textarea value={mustAvoid} onChange={e => updateField('mustAvoid', e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        <div className="brief-actions">
+          <button className="btn primary" onClick={generatePrompt}>Tạo Humanize Prompt</button>
+          <button className="btn" onClick={copyPrompt}>Sao chép Humanize Prompt</button>
+          <button className="btn" onClick={openGemini}>Mở Gemini</button>
+          <button className="btn ghost" onClick={onBackToScript}>Quay lại Script</button>
+          <button className="btn ghost" onClick={onBackToDashboard}>Về Dashboard</button>
+        </div>
+
+        <div className="humanize-prompt-panel">
+          <label>Generated Humanize Prompt</label>
+          <textarea className="prompt-output humanize-prompt" value={generatedPrompt} readOnly style={{ minHeight: 480 }} />
+        </div>
+
+        <div className="humanize-result-panel">
+          <h3>Humanized Script Result</h3>
+          <textarea
+            className="humanize-text"
+            placeholder="Dán toàn bộ Script đã Humanize từ Gemini vào đây..."
+            value={text}
+            onChange={e => updateText(e.target.value)}
+          />
+          <div className="result-footer">
+            <div className="char-count">{text.length} ký tự</div>
+            {saved && <div className="saved-status">Đã lưu</div>}
+          </div>
+          {error && <div className="error-message">{error}</div>}
+          <div className="brief-actions">
+            <button className="btn" onClick={saveText}>Lưu Humanized Script</button>
+            <button className="btn primary" onClick={complete}>Hoàn thành Humanize và mở Storyboard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryboardResult, onUpdateStoryboardScenes, onSaveStoryboard, onBackToHumanize, onBackToDashboard }) {
+  const [prompt, setPrompt] = useState(project.generatedStoryboardPrompt || '')
+  const [rawStoryboard, setRawStoryboard] = useState(project.rawStoryboardResult || '')
+  const [scenesText, setScenesText] = useState(JSON.stringify(project.storyboardScenes || [], null, 2))
+  const [saved, setSaved] = useState(project.storyboardSaved || false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setPrompt(project.generatedStoryboardPrompt || '')
+    setRawStoryboard(project.rawStoryboardResult || '')
+    setScenesText(JSON.stringify(project.storyboardScenes || [], null, 2))
+    setSaved(project.storyboardSaved || false)
+    setError('')
+  }, [project.generatedStoryboardPrompt, project.rawStoryboardResult, project.storyboardScenes, project.storyboardSaved])
+
+  function generatePrompt() {
+    try {
+      const generated = StoryboardEngine.generate({
+        topic: project.topic,
+        language: project.language,
+        market: project.market,
+        duration: project.duration,
+        style: project.style,
+        audience: project.audience,
+        emotions: project.emotions,
+        humanizedScriptResult: project.humanizedScriptResult || project.scriptResult || ''
+      })
+      setPrompt(generated)
+      onGenerateStoryboardPrompt(generated)
+      setError('')
+    } catch (err) {
+      setError(err.message || 'Không thể tạo Storyboard Prompt. Hãy kiểm tra lại.')
+    }
+  }
+
+  function updateRaw(value) {
+    setRawStoryboard(value)
+    onUpdateRawStoryboardResult(value)
+    setSaved(false)
+    setError('')
+  }
+
+  function updateScenes(value) {
+    setScenesText(value)
+    try {
+      const parsed = JSON.parse(value)
+      if (!Array.isArray(parsed)) {
+        setError('Storyboard scenes phải là một mảng JSON.')
+        return
+      }
+      onUpdateStoryboardScenes(parsed)
+      setSaved(false)
+      setError('')
+    } catch (err) {
+      setError('Storyboard scenes phải là JSON hợp lệ.')
+    }
+  }
+
+  function saveStoryboard() {
+    try {
+      const parsed = JSON.parse(scenesText)
+      if (!Array.isArray(parsed)) {
+        setError('Storyboard scenes phải là một mảng JSON.')
+        return
+      }
+      onUpdateStoryboardScenes(parsed)
+      onSaveStoryboard()
+      setSaved(true)
+      setError('')
+    } catch (err) {
+      setError('Storyboard scenes phải là JSON hợp lệ.')
+    }
+  }
+
+  return (
+    <div className="storyboard-view">
+      <div className="project-info">
+        <h2>{project.topic}</h2>
+        <div className="meta">Storyboard stage</div>
+        <div className="meta">{project.market} • {project.language} • {project.duration} • {project.style}</div>
+      </div>
+
+      <ProjectDNACard dna={project.dna} />
+
+      <div className="storyboard-panel">
+        <div className="brief-actions">
+          <button className="btn primary" onClick={generatePrompt}>Tạo Storyboard Prompt</button>
+          <button className="btn ghost" onClick={onBackToHumanize}>Quay lại Humanize</button>
+          <button className="btn ghost" onClick={onBackToDashboard}>Về Dashboard</button>
+        </div>
+
+        <div className="storyboard-prompt-section">
+          <label>Generated Storyboard Prompt</label>
+          <textarea className="prompt-output storyboard-prompt" value={prompt} readOnly style={{ minHeight: 180 }} />
+        </div>
+
+        <div className="storyboard-raw-section">
+          <label>Raw Storyboard Result</label>
+          <textarea
+            className="storyboard-result"
+            placeholder="Dán kết quả Storyboard từ Gemini vào đây..."
+            value={rawStoryboard}
+            onChange={e => updateRaw(e.target.value)}
+            style={{ minHeight: 200 }}
+          />
+        </div>
+
+        <div className="storyboard-scenes-section">
+          <label>Storyboard Scenes (JSON Array)</label>
+          <textarea
+            className="storyboard-scenes"
+            placeholder='[ {"scene":"Opening", "description":"..."} ]'
+            value={scenesText}
+            onChange={e => updateScenes(e.target.value)}
+            style={{ minHeight: 200 }}
+          />
+        </div>
+
+        <div className="result-footer">
+          <div className="char-count">{rawStoryboard.length} ký tự</div>
+          {saved && <div className="saved-status">Storyboard đã được lưu</div>}
+        </div>
+        {error && <div className="error-message">{error}</div>}
+
+        <div className="brief-actions">
+          <button className="btn" onClick={saveStoryboard}>Lưu Storyboard</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [projects, setProjects] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -663,6 +1002,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState('dashboard')
   const [currentStage, setCurrentStage] = useState(null)
   const [message, setMessage] = useState('')
+  const studioDNA = useStudioDNA()
 
   function openWizard() { setWizardOpen(true) }
   function closeWizard() { setWizardOpen(false) }
@@ -674,9 +1014,10 @@ export default function App() {
     const storedWorkflow = loadWorkflow()
     if (storedProject && storedProject.id) {
       const workflow = normalizeWorkflow(Array.isArray(storedProject.workflow) ? storedProject.workflow : storedWorkflow || WorkflowEngine.createInitialWorkflow())
-      const projectWithDNA = storedProject.dna ? { ...storedProject, workflow } : { ...storedProject, workflow, dna: storedDNA || createProjectDNA(storedProject) }
+      const normalizedProject = ensureStoryboardFields(storedProject)
+      const projectWithDNA = normalizedProject.dna ? { ...normalizedProject, workflow } : { ...normalizedProject, workflow, dna: storedDNA || createProjectDNA(normalizedProject) }
       if (!projectWithDNA.dna) {
-        projectWithDNA.dna = createProjectDNA(storedProject)
+        projectWithDNA.dna = createProjectDNA(normalizedProject)
       }
       setProjects([projectWithDNA])
       setViewProjectId(projectWithDNA.id)
@@ -693,6 +1034,8 @@ export default function App() {
         setViewMode('script')
       } else if (storedStage === 'humanize') {
         setViewMode('humanize')
+      } else if (storedStage === 'storyboard') {
+        setViewMode('storyboard')
       } else {
         setViewMode('dashboard')
       }
@@ -716,7 +1059,24 @@ export default function App() {
   function createProject(p) {
     const dna = createProjectDNA(p)
     const workflow = WorkflowEngine.createInitialWorkflow()
-    const projectWithDNA = { ...p, dna, workflow }
+    const projectWithDNA = {
+      ...p,
+      dna,
+      workflow,
+      humanizeObjective: '',
+      naturalnessLevel: '',
+      narrationRhythm: '',
+      retentionStyle: '',
+      humanizeMustPreserve: '',
+      humanizeMustAvoid: '',
+      generatedHumanizePrompt: '',
+      humanizedScriptResult: '',
+      humanizedScriptSaved: false,
+      generatedStoryboardPrompt: '',
+      rawStoryboardResult: '',
+      storyboardScenes: [],
+      storyboardSaved: false
+    }
     setProjects([projectWithDNA])
     setViewProjectId(projectWithDNA.id)
     setViewMode('research')
@@ -809,6 +1169,24 @@ export default function App() {
     })
   }
 
+  function updateHumanizeSettings(id, updates) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...updates } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveGeneratedHumanizePrompt(id, prompt) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, generatedHumanizePrompt: prompt } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
   function saveScript(id) {
     setProjects(prev => {
       const next = prev.map(p => p.id === id ? { ...p, scriptSaved: true } : p)
@@ -848,9 +1226,93 @@ export default function App() {
     return null
   }
 
+  function updateHumanizedScript(id, humanizedScriptResult) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, humanizedScriptResult, humanizedScriptSaved: false } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveHumanizedScript(id) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, humanizedScriptSaved: true } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+    setCurrentStage('humanize')
+    setMessage('Humanized Script đã được lưu vào bộ nhớ.')
+  }
+
+  function completeHumanize(id) {
+    const project = projects.find(p => p.id === id)
+    if (!project) return 'Không tìm thấy dự án.'
+    const humanizedText = project.humanizedScriptResult || ''
+    if (humanizedText.trim().length < 3000) {
+      return 'Humanized Script phải có ít nhất 3000 ký tự.'
+    }
+
+    const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(project.workflow, 'humanize')
+    if (completeError) {
+      return completeError
+    }
+
+    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'storyboard', project)
+    if (enterError) {
+      return enterError
+    }
+
+    const nextProject = { ...project, humanizedScriptSaved: true, workflow: nextWorkflow }
+    setProjects([nextProject])
+    saveProject(nextProject)
+    saveWorkflow(nextWorkflow)
+    setCurrentStage('storyboard')
+    setViewMode('storyboard')
+    setMessage('Humanize hoàn thành. Storyboard đã được mở khóa.')
+    return null
+  }
+
   function saveGeneratedScriptPrompt(id, prompt) {
     setProjects(prev => {
       const next = prev.map(p => p.id === id ? { ...p, generatedScriptPrompt: prompt } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveGeneratedStoryboardPrompt(id, prompt) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, generatedStoryboardPrompt: prompt } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function updateRawStoryboardResult(id, rawStoryboardResult) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, rawStoryboardResult } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function updateStoryboardScenes(id, storyboardScenes) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, storyboardScenes, storyboardSaved: false } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveStoryboard(id) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, storyboardSaved: true } : p)
       const active = next.find(p => p.id === id)
       if (active) saveProject(active)
       return next
@@ -954,6 +1416,21 @@ export default function App() {
     setMessage('')
   }
 
+  function handleOpenStoryboard() {
+    if (!activeProject) return
+    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'storyboard', activeProject)
+    if (error) {
+      setMessage(error)
+      return
+    }
+    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    setViewProjectId(activeProject.id)
+    setViewMode('storyboard')
+    setCurrentStage('storyboard')
+    saveWorkflow(nextWorkflow)
+    setMessage('')
+  }
+
   function handleOpenProjectCard() {
     if (!activeProject) {
       setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
@@ -963,6 +1440,8 @@ export default function App() {
       setViewMode('script')
     } else if (currentStage === 'humanize') {
       setViewMode('humanize')
+    } else if (currentStage === 'storyboard') {
+      setViewMode('storyboard')
     } else if (currentStage === 'outline') {
       setViewMode('outline')
     } else if (currentStage === 'research') {
@@ -1049,7 +1528,7 @@ export default function App() {
                 <h2>Workflow</h2>
                 <div className="steps">
                   {activeProject?.workflow?.map((stage, i) => {
-                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : stage.id === 'humanize' ? handleOpenHumanize : undefined
+                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : stage.id === 'humanize' ? handleOpenHumanize : stage.id === 'storyboard' ? handleOpenStoryboard : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (
@@ -1094,20 +1573,32 @@ export default function App() {
               onBackToOutline={() => { setViewMode('outline'); setCurrentStage('outline') }}
             />
           )}
+          {activeProject && viewMode === 'humanize' && (
+            <HumanizeView
+              project={activeProject}
+              studioDNA={studioDNA.dna}
+              onUpdateHumanizedScript={(value) => updateHumanizedScript(activeProject.id, value)}
+              onUpdateHumanizeSettings={(updates) => updateHumanizeSettings(activeProject.id, updates)}
+              onSaveGeneratedHumanizePrompt={(prompt) => saveGeneratedHumanizePrompt(activeProject.id, prompt)}
+              onSaveHumanizedScript={() => saveHumanizedScript(activeProject.id)}
+              onCompleteHumanize={() => completeHumanize(activeProject.id)}
+              onBackToScript={() => { setViewMode('script'); setCurrentStage('script') }}
+              onBackToDashboard={() => { setViewMode('dashboard'); setMessage('') }}
+            />
+          )}
+          {activeProject && viewMode === 'storyboard' && (
+            <StoryboardView
+              project={activeProject}
+              onGenerateStoryboardPrompt={(prompt) => saveGeneratedStoryboardPrompt(activeProject.id, prompt)}
+              onUpdateRawStoryboardResult={(raw) => updateRawStoryboardResult(activeProject.id, raw)}
+              onUpdateStoryboardScenes={(scenes) => updateStoryboardScenes(activeProject.id, scenes)}
+              onSaveStoryboard={() => saveStoryboard(activeProject.id)}
+              onBackToHumanize={() => { setViewMode('humanize'); setCurrentStage('humanize') }}
+              onBackToDashboard={() => { setViewMode('dashboard'); setMessage('') }}
+            />
+          )}
           {viewMode === 'studio' && (
             <StudioSettings />
-          )}
-          {activeProject && viewMode === 'humanize' && (
-            <div className="humanize-view">
-              <div className="project-info">
-                <h2>Humanize</h2>
-                <div className="meta">Humanize stage is now unlocked.</div>
-              </div>
-              <div className="outline-summary">
-                <h3>Ready for Humanize</h3>
-                <p>Script đã hoàn tất và Humanize được mở khóa. Tiếp tục thực hiện giai đoạn Humanize.</p>
-              </div>
-            </div>
           )}
         </main>
       </div>
