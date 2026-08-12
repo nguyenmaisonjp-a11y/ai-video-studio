@@ -72,11 +72,11 @@ export const WORKFLOW_STAGES = [
     requiredInputs: ['script.completed'],
     producedOutputs: ['humanize.completed'],
     previousStage: 'script',
-    nextStage: 'storyboard'
+    nextStage: 'voiceScript'
   },
   {
     id: 'storyboard',
-    number: 6,
+    number: 7,
     label: 'Storyboard',
     statusLabel: {
       locked: 'Chưa mở khóa',
@@ -84,14 +84,14 @@ export const WORKFLOW_STAGES = [
       active: 'Đang thực hiện',
       completed: 'Hoàn thành'
     },
-    requiredInputs: ['humanize.completed'],
+    requiredInputs: ['voiceScript.completed'],
     producedOutputs: ['storyboard.completed'],
-    previousStage: 'humanize',
-    nextStage: 'voiceScript'
+    previousStage: 'voiceScript',
+    nextStage: 'imagePrompt'
   },
   {
     id: 'voiceScript',
-    number: 7,
+    number: 6,
     label: 'Voice Script',
     statusLabel: {
       locked: 'Chưa mở khóa',
@@ -99,10 +99,10 @@ export const WORKFLOW_STAGES = [
       active: 'Đang thực hiện',
       completed: 'Hoàn thành'
     },
-    requiredInputs: ['storyboard.completed'],
+    requiredInputs: ['humanize.completed'],
     producedOutputs: ['voiceScript.completed'],
-    previousStage: 'storyboard',
-    nextStage: 'imagePrompt'
+    previousStage: 'humanize',
+    nextStage: 'storyboard'
   },
   {
     id: 'imagePrompt',

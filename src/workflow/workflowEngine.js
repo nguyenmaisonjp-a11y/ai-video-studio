@@ -69,21 +69,48 @@ export const WorkflowEngine = {
   },
 
   enterStage(workflow, stageId, project) {
-    const nextWorkflow = cloneWorkflow(workflow)
-    const stage = this.getStage(nextWorkflow, stageId)
-    if (!stage) return { workflow: nextWorkflow, error: 'Giai đoạn không tồn tại.' }
-    const result = this.canEnterStage(nextWorkflow, stageId, project)
-    if (!result.ok) return { workflow: nextWorkflow, error: result.error }
-    nextWorkflow.forEach((item) => {
-      if (item.id === stageId) {
-        if (item.status === 'locked') item.status = 'available'
-        if (item.status !== 'completed') item.status = 'active'
-      } else if (item.status === 'active') {
-        item.status = 'completed'
+  const nextWorkflow = cloneWorkflow(workflow)
+  const stage = this.getStage(nextWorkflow, stageId)
+
+  if (!stage) {
+    return {
+      workflow: nextWorkflow,
+      error: 'Giai đoạn không tồn tại.'
+    }
+  }
+
+  const result = this.canEnterStage(
+    nextWorkflow,
+    stageId,
+    project
+  )
+
+  if (!result.ok) {
+    return {
+      workflow: nextWorkflow,
+      error: result.error
+    }
+  }
+
+  nextWorkflow.forEach((item) => {
+    if (item.id === stageId) {
+      // Completed stages remain completed when revisited.
+      // Available/active stages become active.
+      if (item.status !== 'completed') {
+        item.status = 'active'
       }
-    })
-    return { workflow: nextWorkflow, error: null }
-  },
+    } else if (item.status === 'active') {
+      // Navigating away must NOT complete a stage.
+      // Keep it accessible but not completed.
+      item.status = 'available'
+    }
+  })
+
+  return {
+    workflow: nextWorkflow,
+    error: null
+  }
+},
 
   completeStage(workflow, stageId, output) {
     const nextWorkflow = cloneWorkflow(workflow)

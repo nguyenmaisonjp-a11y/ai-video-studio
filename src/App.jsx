@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { ResearchEngine, OutlineEngine, ScriptEngine, HumanizeEngine, StoryboardEngine } from './brain'
+import { ResearchEngine, OutlineEngine, ScriptEngine, HumanizeEngine, StoryboardEngine, VoiceScriptEngine } from './brain'
 import { generateOutlineBrief } from './lib/outlineBrain.js'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
+import { normalizeScenes } from './lib/videoProjectSchema.js'
 import { saveProject, loadProject, clearProject, saveCurrentStage, loadCurrentStage } from './utils/projectStorage.js'
 import { WorkflowEngine } from './workflow/workflowEngine.js'
 import { loadWorkflow, saveWorkflow, clearWorkflow } from './workflow/workflowStorage.js'
@@ -47,6 +48,18 @@ function ensureStoryboardFields(project) {
     generatedHumanizePrompt: project.generatedHumanizePrompt || '',
     humanizedScriptResult: project.humanizedScriptResult || '',
     humanizedScriptSaved: project.humanizedScriptSaved || false,
+    // Voice Script fields
+    voiceObjective: project.voiceObjective || '',
+    narrationStyle: project.narrationStyle || '',
+    pace: project.pace || '',
+    pauseStrategy: project.pauseStrategy || '',
+    emphasisStrategy: project.emphasisStrategy || '',
+    pronunciationNotes: project.pronunciationNotes || '',
+    voiceMustPreserve: project.voiceMustPreserve || '',
+    voiceMustAvoid: project.voiceMustAvoid || '',
+    generatedVoiceScriptPrompt: project.generatedVoiceScriptPrompt || '',
+    voiceScriptResult: project.voiceScriptResult || '',
+    voiceScriptSaved: project.voiceScriptSaved || false,
     generatedStoryboardPrompt: project.generatedStoryboardPrompt || '',
     rawStoryboardResult: project.rawStoryboardResult || '',
     storyboardScenes: Array.isArray(project.storyboardScenes) ? project.storyboardScenes : [],
@@ -863,6 +876,136 @@ function HumanizeView({ project, studioDNA, onUpdateHumanizedScript, onUpdateHum
   )
 }
 
+function VoiceScriptView({ project, studioDNA, onUpdateVoiceBrief, onSaveGeneratedVoiceScriptPrompt, onGenerateVoiceScriptPrompt, onUpdateVoiceScriptResult, onSaveVoiceScript, onCompleteVoiceScript, onBackToHumanize, onBackToDashboard }) {
+  const [prompt, setPrompt] = useState(project.generatedVoiceScriptPrompt || '')
+  const [result, setResult] = useState(project.voiceScriptResult || '')
+  const [saved, setSaved] = useState(project.voiceScriptSaved || false)
+  const [showFullHumanized, setShowFullHumanized] = useState(false)
+  const [voiceObjective, setVoiceObjective] = useState(project.voiceObjective || (project.dna?.coreIdea || 'Make narration conversational and clear'))
+  const [narrationStyle, setNarrationStyle] = useState(project.narrationStyle || (studioDNA?.preferredNarrationStyle || 'Natural, measured'))
+  const [pace, setPace] = useState(project.pace || 'Moderate')
+  const [pauseStrategy, setPauseStrategy] = useState(project.pauseStrategy || 'Short pauses at commas, longer at paragraph ends')
+  const [emphasisStrategy, setEmphasisStrategy] = useState(project.emphasisStrategy || 'Restrained emphasis for key facts')
+  const [pronunciationNotes, setPronunciationNotes] = useState(project.pronunciationNotes || '')
+  const [mustPreserve, setMustPreserve] = useState(project.voiceMustPreserve || 'Facts, statistics, source meaning')
+  const [mustAvoid, setMustAvoid] = useState(project.voiceMustAvoid || 'Theatrical directions, invented facts')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setPrompt(project.generatedVoiceScriptPrompt || '')
+    setResult(project.voiceScriptResult || '')
+    setSaved(project.voiceScriptSaved || false)
+    setVoiceObjective(project.voiceObjective || (project.dna?.coreIdea || 'Make narration conversational and clear'))
+    setNarrationStyle(project.narrationStyle || (studioDNA?.preferredNarrationStyle || 'Natural, measured'))
+    setPace(project.pace || 'Moderate')
+    setPauseStrategy(project.pauseStrategy || 'Short pauses at commas, longer at paragraph ends')
+    setEmphasisStrategy(project.emphasisStrategy || 'Restrained emphasis for key facts')
+    setPronunciationNotes(project.pronunciationNotes || '')
+    setMustPreserve(project.voiceMustPreserve || 'Facts, statistics, source meaning')
+    setMustAvoid(project.voiceMustAvoid || 'Theatrical directions, invented facts')
+  }, [project.generatedVoiceScriptPrompt, project.voiceScriptResult, project.voiceScriptSaved, project.voiceObjective, project.narrationStyle, project.pace, project.pauseStrategy, project.emphasisStrategy, project.pronunciationNotes, project.voiceMustPreserve, project.voiceMustAvoid])
+
+  function generatePrompt() {
+    try {
+      const p = VoiceScriptEngine.generate({
+        topic: project.topic,
+        language: project.language,
+        audience: project.audience,
+        duration: project.duration,
+        projectDNA: project.dna,
+        studioDNA,
+        humanizedScriptResult: project.humanizedScriptResult || '',
+        voiceObjective,
+        narrationStyle,
+        pace,
+        pauseStrategy,
+        emphasisStrategy,
+        pronunciationNotes,
+        mustPreserve,
+        mustAvoid
+      })
+      setPrompt(p)
+      onSaveGeneratedVoiceScriptPrompt(p)
+      setError('')
+    } catch (err) {
+      setError(err.message || 'Không thể tạo Voice Script Prompt.')
+    }
+  }
+
+  function copyPrompt() {
+    if (!prompt) return
+    try { navigator.clipboard.writeText(prompt) } catch (e) {}
+  }
+
+  function openGemini() { window.open('https://gemini.google.com/app', '_blank') }
+
+  function saveResult() {
+    if (result.trim().length < 3000) {
+      setError('Voice Script phải có ít nhất 3000 ký tự.')
+      return
+    }
+    onUpdateVoiceScriptResult(result)
+    onSaveVoiceScript()
+    setSaved(true)
+    setError('')
+  }
+
+  function complete() {
+    const r = onCompleteVoiceScript()
+    if (r) setError(r)
+  }
+
+  return (
+    <div className="voiceview">
+      <div className="meta">Voice Script stage</div>
+      <ProjectDNACard dna={project.dna} />
+
+      <div className="humanized-preview">
+        <h3>Humanized Script Preview</h3>
+        <div className="preview-box">{ showFullHumanized ? project.humanizedScriptResult : (project.humanizedScriptResult || '').slice(0,2000) }</div>
+        <button className="btn" onClick={() => setShowFullHumanized(!showFullHumanized)}>{showFullHumanized ? 'Thu gọn' : 'Xem toàn bộ Humanized Script'}</button>
+      </div>
+
+      <div className="voice-brief">
+        <h3>Voice Script Brief</h3>
+        <div className="field-group"><label>Voice objective</label><input value={voiceObjective} onChange={e=>{setVoiceObjective(e.target.value); onUpdateVoiceBrief({ voiceObjective: e.target.value })}}/></div>
+        <div className="field-group"><label>Narration style</label><input value={narrationStyle} onChange={e=>{setNarrationStyle(e.target.value); onUpdateVoiceBrief({ narrationStyle: e.target.value })}}/></div>
+        <div className="field-group"><label>Pace</label><input value={pace} onChange={e=>{setPace(e.target.value); onUpdateVoiceBrief({ pace: e.target.value })}}/></div>
+        <div className="field-group"><label>Pause strategy</label><input value={pauseStrategy} onChange={e=>{setPauseStrategy(e.target.value); onUpdateVoiceBrief({ pauseStrategy: e.target.value })}}/></div>
+        <div className="field-group"><label>Emphasis strategy</label><input value={emphasisStrategy} onChange={e=>{setEmphasisStrategy(e.target.value); onUpdateVoiceBrief({ emphasisStrategy: e.target.value })}}/></div>
+        <div className="field-group"><label>Pronunciation notes</label><input value={pronunciationNotes} onChange={e=>{setPronunciationNotes(e.target.value); onUpdateVoiceBrief({ pronunciationNotes: e.target.value })}}/></div>
+        <div className="field-group"><label>Must preserve</label><textarea value={mustPreserve} onChange={e=>{setMustPreserve(e.target.value); onUpdateVoiceBrief({ voiceMustPreserve: e.target.value })}}/></div>
+        <div className="field-group"><label>Must avoid</label><textarea value={mustAvoid} onChange={e=>{setMustAvoid(e.target.value); onUpdateVoiceBrief({ voiceMustAvoid: e.target.value })}}/></div>
+      </div>
+
+      <div className="brief-actions">
+        <button className="btn primary" onClick={generatePrompt}>Tạo Voice Script Prompt</button>
+        <button className="btn" onClick={copyPrompt}>Sao chép Voice Script Prompt</button>
+        <button className="btn" onClick={openGemini}>Mở Gemini</button>
+        <button className="btn ghost" onClick={onBackToHumanize}>Quay lại Humanize</button>
+        <button className="btn ghost" onClick={onBackToDashboard}>Về Dashboard</button>
+      </div>
+
+      <label>Generated Voice Script Prompt</label>
+      <textarea className="prompt-output voice-prompt" value={prompt} readOnly style={{ minHeight: 480, width: '100%' }} />
+
+      <div className="voice-result-panel">
+        <h3>VOICE SCRIPT RESULT</h3>
+        <textarea className="voice-result" placeholder="Dán toàn bộ Voice Script từ Gemini vào đây..." value={result} onChange={e=>setResult(e.target.value)} />
+        <div className="result-footer">
+          <div className="char-count">{result.length} ký tự</div>
+          {saved && <div className="saved-status">Đã lưu</div>}
+        </div>
+        <div className="brief-actions">
+          <button className="btn" onClick={saveResult}>Lưu Voice Script</button>
+          <button className="btn primary" onClick={complete}>Hoàn thành Voice Script & Mở Storyboard</button>
+        </div>
+        {error && <div className="error-message">{error}</div>}
+      </div>
+    </div>
+  )
+}
+
 function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryboardResult, onUpdateStoryboardScenes, onSaveStoryboard, onBackToHumanize, onBackToDashboard }) {
   const [prompt, setPrompt] = useState(project.generatedStoryboardPrompt || '')
   const [rawStoryboard, setRawStoryboard] = useState(project.rawStoryboardResult || '')
@@ -906,36 +1049,51 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
   }
 
   function updateScenes(value) {
-    setScenesText(value)
-    try {
-      const parsed = JSON.parse(value)
-      if (!Array.isArray(parsed)) {
-        setError('Storyboard scenes phải là một mảng JSON.')
-        return
-      }
-      onUpdateStoryboardScenes(parsed)
-      setSaved(false)
-      setError('')
-    } catch (err) {
-      setError('Storyboard scenes phải là JSON hợp lệ.')
+  setScenesText(value)
+
+  try {
+    const parsed = JSON.parse(value)
+
+    if (!Array.isArray(parsed)) {
+      setError('Storyboard scenes phải là một mảng JSON.')
+      return
     }
+
+    const normalizedScenes = normalizeScenes(parsed)
+
+    onUpdateStoryboardScenes(normalizedScenes)
+
+    setSaved(false)
+    setError('')
+  } catch (err) {
+    setError('Storyboard scenes phải là JSON hợp lệ.')
   }
+}
 
   function saveStoryboard() {
-    try {
-      const parsed = JSON.parse(scenesText)
-      if (!Array.isArray(parsed)) {
-        setError('Storyboard scenes phải là một mảng JSON.')
-        return
-      }
-      onUpdateStoryboardScenes(parsed)
-      onSaveStoryboard()
-      setSaved(true)
-      setError('')
-    } catch (err) {
-      setError('Storyboard scenes phải là JSON hợp lệ.')
+  try {
+    const parsed = JSON.parse(scenesText)
+
+    if (!Array.isArray(parsed)) {
+      setError('Storyboard scenes phải là một mảng JSON.')
+      return
     }
+
+    const normalizedScenes = normalizeScenes(parsed)
+
+    onUpdateStoryboardScenes(normalizedScenes)
+    onSaveStoryboard()
+
+    setScenesText(
+      JSON.stringify(normalizedScenes, null, 2)
+    )
+
+    setSaved(true)
+    setError('')
+  } catch (err) {
+    setError('Storyboard scenes phải là JSON hợp lệ.')
   }
+}
 
   return (
     <div className="storyboard-view">
@@ -1006,6 +1164,16 @@ export default function App() {
 
   function openWizard() { setWizardOpen(true) }
   function closeWizard() { setWizardOpen(false) }
+  
+  function replaceProjectInState(nextProject) {
+  setProjects(prev =>
+    prev.map(project =>
+      project.id === nextProject.id
+        ? nextProject
+        : project
+    )
+  )
+}
 
   useEffect(() => {
     const storedProject = loadProject()
@@ -1013,7 +1181,40 @@ export default function App() {
     const storedDNA = loadProjectDNA()
     const storedWorkflow = loadWorkflow()
     if (storedProject && storedProject.id) {
-      const workflow = normalizeWorkflow(Array.isArray(storedProject.workflow) ? storedProject.workflow : storedWorkflow || WorkflowEngine.createInitialWorkflow())
+      let workflow = normalizeWorkflow(Array.isArray(storedProject.workflow) ? storedProject.workflow : storedWorkflow || WorkflowEngine.createInitialWorkflow())
+      // Backward-compatible reconciliation:
+      // If Humanize is completed and Voice Script is still locked, and Storyboard not completed,
+      // activate Voice Script so users with older saved projects can continue.
+      try {
+        const humanizeStage = workflow.find(s => s.id === 'humanize')
+        const voiceStage = workflow.find(s => s.id === 'voiceScript')
+        const storyboardStage = workflow.find(s => s.id === 'storyboard')
+        const imagePromptStage = workflow.find(s => s.id === 'imagePrompt')
+        if (humanizeStage && humanizeStage.status === 'completed' && voiceStage && voiceStage.status === 'locked' && storyboardStage && storyboardStage.status !== 'completed') {
+          // set voice script active but keep storyboard locked
+          workflow = workflow.map(s => {
+            if (s.id === 'voiceScript') return { ...s, status: 'active' }
+            return s
+          })
+        }
+        // Repair legacy inconsistent Storyboard state
+        if ( voiceStage &&
+          voiceStage.status === 'completed' &&
+          storyboardStage &&
+          storyboardStage.status === 'completed' &&
+          imagePromptStage &&
+          imagePromptStage.status === 'locked'
+        ) {
+          workflow = workflow.map(s => {
+            if (s.id === 'storyboard') {
+              return { ...s, status: 'active' }
+         }
+         return s
+         })
+        }
+      } catch (e) {
+        // ignore reconciliation errors
+      }
       const normalizedProject = ensureStoryboardFields(storedProject)
       const projectWithDNA = normalizedProject.dna ? { ...normalizedProject, workflow } : { ...normalizedProject, workflow, dna: storedDNA || createProjectDNA(normalizedProject) }
       if (!projectWithDNA.dna) {
@@ -1024,8 +1225,16 @@ export default function App() {
       if (!projectWithDNA.dna) {
         saveProjectDNA()
       }
+      // persist reconciled workflow
       saveWorkflow(workflow)
-      setCurrentStage(storedStage)
+      // If we reconciled to make voiceScript active and the stored stage was humanize/dashboard/null,
+      // allow navigation directly to Voice Script.
+      const reconciledVoiceActive = workflow.find(s => s.id === 'voiceScript' && s.status === 'active')
+      if (reconciledVoiceActive && (storedStage === 'humanize' || !storedStage || storedStage === 'dashboard')) {
+        setCurrentStage('voiceScript')
+      } else {
+        setCurrentStage(storedStage)
+      }
       if (storedStage === 'outline') {
         setViewMode('outline')
       } else if (storedStage === 'research') {
@@ -1033,7 +1242,12 @@ export default function App() {
       } else if (storedStage === 'script') {
         setViewMode('script')
       } else if (storedStage === 'humanize') {
-        setViewMode('humanize')
+        // If we set voiceScript active above and currentStage was humanize, switch view to voiceScript
+        if (reconciledVoiceActive && (storedStage === 'humanize' || !storedStage || storedStage === 'dashboard')) {
+          setViewMode('voiceScript')
+        } else {
+          setViewMode('humanize')
+        }
       } else if (storedStage === 'storyboard') {
         setViewMode('storyboard')
       } else {
@@ -1072,6 +1286,18 @@ export default function App() {
       generatedHumanizePrompt: '',
       humanizedScriptResult: '',
       humanizedScriptSaved: false,
+      // Voice Script defaults
+      voiceObjective: '',
+      narrationStyle: '',
+      pace: '',
+      pauseStrategy: '',
+      emphasisStrategy: '',
+      pronunciationNotes: '',
+      voiceMustPreserve: '',
+      voiceMustAvoid: '',
+      generatedVoiceScriptPrompt: '',
+      voiceScriptResult: '',
+      voiceScriptSaved: false,
       generatedStoryboardPrompt: '',
       rawStoryboardResult: '',
       storyboardScenes: [],
@@ -1143,7 +1369,7 @@ export default function App() {
 
     // Persist project updates and workflow
     const nextProject = { ...project, outlineSaved: true, outlineResult: outlineText, outlineCompletedAt: completedAt, workflow: nextWorkflow }
-    setProjects([nextProject])
+    replaceProjectInState(nextProject)
     saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setCurrentStage('script')
@@ -1217,7 +1443,7 @@ export default function App() {
     }
 
     const nextProject = { ...project, scriptSaved: true, workflow: nextWorkflow }
-    setProjects([nextProject])
+    replaceProjectInState(nextProject)
     saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setCurrentStage('humanize')
@@ -1259,18 +1485,19 @@ export default function App() {
       return completeError
     }
 
-    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'storyboard', project)
+    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'voiceScript', project)
     if (enterError) {
       return enterError
     }
 
     const nextProject = { ...project, humanizedScriptSaved: true, workflow: nextWorkflow }
-    setProjects([nextProject])
+    replaceProjectInState(nextProject)
     saveProject(nextProject)
     saveWorkflow(nextWorkflow)
-    setCurrentStage('storyboard')
-    setViewMode('storyboard')
-    setMessage('Humanize hoàn thành. Storyboard đã được mở khóa.')
+    saveCurrentStage('voiceScript')
+    setCurrentStage('voiceScript')
+    setViewMode('voiceScript')
+    setMessage('Humanize hoàn thành. Voice Script đã được mở khóa.')
     return null
   }
 
@@ -1282,6 +1509,141 @@ export default function App() {
       return next
     })
   }
+
+  function saveGeneratedVoiceScriptPrompt(id, prompt) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, generatedVoiceScriptPrompt: prompt } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function updateVoiceScriptResult(id, voiceScriptResult) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, voiceScriptResult, voiceScriptSaved: false } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function updateVoiceBrief(id, updates) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...updates } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+  }
+
+  function saveVoiceScript(id) {
+    setProjects(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, voiceScriptSaved: true } : p)
+      const active = next.find(p => p.id === id)
+      if (active) saveProject(active)
+      return next
+    })
+    setCurrentStage('voiceScript')
+    setMessage('Voice Script đã được lưu vào bộ nhớ.')
+  }
+
+ function completeVoiceScript(id) {
+  const project =
+    projects.find(p => p.id === viewProjectId) ||
+    projects.find(p => p.id === id)
+
+  if (!project) return 'Không tìm thấy dự án.'
+
+  const voiceText = project.voiceScriptResult || ''
+
+  if (voiceText.trim().length < 3000) {
+    return 'Voice Script phải có ít nhất 3000 ký tự.'
+  }
+
+  const stage =
+    project.workflow &&
+    project.workflow.find(s => s.id === 'voiceScript')
+
+  if (!stage) {
+    return 'Giai đoạn Voice Script không tồn tại trong workflow.'
+  }
+
+  let workingWorkflow = project.workflow
+
+  // Nếu Voice Script chưa hoàn thành thì hoàn thành nó.
+  // Nếu đã completed từ trước thì không báo lỗi nữa.
+  if (stage.status === 'active' || stage.status === 'available') {
+    const result = WorkflowEngine.completeStage(
+      workingWorkflow,
+      'voiceScript'
+    )
+
+    if (result.error) {
+      return result.error
+    }
+
+    workingWorkflow = result.workflow
+  } else if (stage.status !== 'completed') {
+    return `Không thể hoàn thành Voice Script vì trạng thái hiện tại là '${stage.status}'.`
+  }
+
+  // Mở Storyboard
+  const storyboardStage = workingWorkflow.find(
+    s => s.id === 'storyboard'
+  )
+
+  if (!storyboardStage) {
+    return 'Giai đoạn Storyboard không tồn tại trong workflow.'
+  }
+
+  // Storyboard phải trở thành stage đang thực hiện.
+  workingWorkflow = workingWorkflow.map(stage => {
+    if (stage.id === 'storyboard') {
+      return {
+        ...stage,
+        status: 'active'
+      }
+    }
+
+    if (stage.id === 'voiceScript') {
+      return {
+        ...stage,
+        status: 'completed'
+      }
+    }
+
+    return stage
+  })
+
+  const nextProject = {
+    ...project,
+    voiceScriptSaved: true,
+    storyboardSaved: false,
+    workflow: workingWorkflow
+  }
+
+  // Không xóa các project khác.
+  setProjects(prev =>
+    prev.map(p =>
+      p.id === nextProject.id ? nextProject : p
+    )
+  )
+
+  saveProject(nextProject)
+  saveWorkflow(workingWorkflow)
+  saveCurrentStage('storyboard')
+
+  setCurrentStage('storyboard')
+  setViewProjectId(nextProject.id)
+  setViewMode('storyboard')
+
+  setMessage(
+    'Voice Script hoàn thành. Storyboard đã được mở khóa.'
+  )
+
+  return null
+}
 
   function saveGeneratedStoryboardPrompt(id, prompt) {
     setProjects(prev => {
@@ -1320,21 +1682,22 @@ export default function App() {
   }
 
   function completeResearch(id) {
-    setProjects(prev => prev.map(p => {
-      if (p.id !== id) return p
-      const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(p.workflow, 'research')
-      if (completeError) {
-        setMessage(completeError)
-        return p
-      }
-      const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'outline', p)
-      if (enterError) {
-        setMessage(enterError)
-        return { ...p, workflow: completedWorkflow }
-      }
-      saveWorkflow(nextWorkflow)
-      return { ...p, workflow: nextWorkflow }
-    }))
+    const project = projects.find(p => p.id === id)
+    if (!project) return
+    const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(project.workflow, 'research')
+    if (completeError) {
+      setMessage(completeError)
+      return
+    }
+    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'outline', project)
+    if (enterError) {
+      setMessage(enterError)
+      return
+    }
+    const nextProject = { ...project, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
+    saveProject(nextProject)
+    saveWorkflow(nextWorkflow)
     setViewMode('outline')
     setCurrentStage('outline')
   }
@@ -1363,10 +1726,12 @@ export default function App() {
       setMessage(error)
       return
     }
-    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    const nextProject = { ...activeProject, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
     setViewProjectId(activeProject.id)
     setViewMode('research')
     setCurrentStage('research')
+    saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setMessage('')
   }
@@ -1378,10 +1743,12 @@ export default function App() {
       setMessage(error)
       return
     }
-    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    const nextProject = { ...activeProject, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
     setViewProjectId(activeProject.id)
     setViewMode('outline')
     setCurrentStage('outline')
+    saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setMessage('')
   }
@@ -1393,10 +1760,12 @@ export default function App() {
       setMessage(error)
       return
     }
-    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    const nextProject = { ...activeProject, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
     setViewProjectId(activeProject.id)
     setViewMode('script')
     setCurrentStage('script')
+    saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setMessage('')
   }
@@ -1408,10 +1777,29 @@ export default function App() {
       setMessage(error)
       return
     }
-    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    const nextProject = { ...activeProject, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
     setViewProjectId(activeProject.id)
     setViewMode('humanize')
     setCurrentStage('humanize')
+    saveProject(nextProject)
+    saveWorkflow(nextWorkflow)
+    setMessage('')
+  }
+
+  function handleOpenVoiceScript() {
+    if (!activeProject) return
+    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'voiceScript', activeProject)
+    if (error) {
+      setMessage(error)
+      return
+    }
+    const nextProject = { ...activeProject, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
+    setViewProjectId(activeProject.id)
+    setViewMode('voiceScript')
+    setCurrentStage('voiceScript')
+    saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setMessage('')
   }
@@ -1423,10 +1811,12 @@ export default function App() {
       setMessage(error)
       return
     }
-    setProjects([{ ...activeProject, workflow: nextWorkflow }])
+    const nextProject = { ...activeProject, workflow: nextWorkflow }
+    replaceProjectInState(nextProject)
     setViewProjectId(activeProject.id)
     setViewMode('storyboard')
     setCurrentStage('storyboard')
+    saveProject(nextProject)
     saveWorkflow(nextWorkflow)
     setMessage('')
   }
@@ -1528,7 +1918,7 @@ export default function App() {
                 <h2>Workflow</h2>
                 <div className="steps">
                   {activeProject?.workflow?.map((stage, i) => {
-                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : stage.id === 'humanize' ? handleOpenHumanize : stage.id === 'storyboard' ? handleOpenStoryboard : undefined
+                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : stage.id === 'humanize' ? handleOpenHumanize : stage.id === 'voiceScript' ? handleOpenVoiceScript : stage.id === 'storyboard' ? handleOpenStoryboard : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (
@@ -1583,6 +1973,19 @@ export default function App() {
               onSaveHumanizedScript={() => saveHumanizedScript(activeProject.id)}
               onCompleteHumanize={() => completeHumanize(activeProject.id)}
               onBackToScript={() => { setViewMode('script'); setCurrentStage('script') }}
+              onBackToDashboard={() => { setViewMode('dashboard'); setMessage('') }}
+            />
+          )}
+          {activeProject && viewMode === 'voiceScript' && (
+            <VoiceScriptView
+              project={activeProject}
+              studioDNA={studioDNA.dna}
+              onUpdateVoiceBrief={(updates) => updateVoiceBrief(activeProject.id, updates)}
+              onSaveGeneratedVoiceScriptPrompt={(prompt) => saveGeneratedVoiceScriptPrompt(activeProject.id, prompt)}
+              onUpdateVoiceScriptResult={(raw) => updateVoiceScriptResult(activeProject.id, raw)}
+              onSaveVoiceScript={() => saveVoiceScript(activeProject.id)}
+              onCompleteVoiceScript={() => completeVoiceScript(activeProject.id)}
+              onBackToHumanize={() => { setViewMode('humanize'); setCurrentStage('humanize') }}
               onBackToDashboard={() => { setViewMode('dashboard'); setMessage('') }}
             />
           )}
