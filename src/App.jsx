@@ -3,6 +3,7 @@ import { ResearchEngine, OutlineEngine, ScriptEngine, HumanizeEngine, Storyboard
 import { generateOutlineBrief } from './lib/outlineBrain.js'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { normalizeScenes } from './lib/videoProjectSchema.js'
+import { validateStoryboardScenes } from './lib/storyboardValidator.js'
 import { saveProject, loadProject, clearProject, saveCurrentStage, loadCurrentStage } from './utils/projectStorage.js'
 import { WorkflowEngine } from './workflow/workflowEngine.js'
 import { loadWorkflow, saveWorkflow, clearWorkflow } from './workflow/workflowStorage.js'
@@ -1060,6 +1061,13 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
     }
 
     const normalizedScenes = normalizeScenes(parsed)
+    
+    const validationErrors = validateStoryboardScenes(normalizedScenes)
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('\n'))
+      return
+    }
 
     onUpdateStoryboardScenes(normalizedScenes)
 
@@ -1080,6 +1088,12 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
     }
 
     const normalizedScenes = normalizeScenes(parsed)
+    const validationErrors = validateStoryboardScenes(normalizedScenes)
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('\n'))
+      return
+    }
 
     onUpdateStoryboardScenes(normalizedScenes)
     onSaveStoryboard()
