@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ResearchEngine, OutlineEngine, ScriptEngine, HumanizeEngine, StoryboardEngine, VoiceScriptEngine } from './brain'
 import { generateOutlineBrief } from './lib/outlineBrain.js'
+import ImagePromptController from './controllers/ImagePromptController.jsx'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { normalizeScenes } from './lib/videoProjectSchema.js'
 import { validateStoryboardScenes } from './lib/storyboardValidator.js'
@@ -20,21 +21,56 @@ function ProgressBar({ percent }) {
   )
 }
 
+function normalizeWorkflowStatus(status) {
+  if (status === 'done' || status === 'completed') return 'completed'
+  if (status === 'inprogress' || status === 'active') return 'active'
+  if (status === 'available') return 'available'
+  return 'locked'
+}
+
 function normalizeWorkflow(workflow) {
-  if (!Array.isArray(workflow)) return null
-  if (workflow.length === 0) return null
-  const first = workflow[0]
-  if (first && first.id && first.label && first.status) {
-    return workflow
-  }
-  return WORKFLOW_STAGES.map((stage) => {
-    const match = workflow.find((item) => item.id === stage.id || item.name === stage.label || item.name === stage.id)
-    if (!match) return { ...stage, status: stage.id === 'idea' ? 'completed' : stage.id === 'research' ? 'active' : 'locked' }
+  const savedStages = Array.isArray(workflow) ? workflow : []
+
+  let normalized = WORKFLOW_STAGES.map((configStage) => {
+    const savedStage = savedStages.find((item) =>
+      item?.id === configStage.id ||
+      item?.name === configStage.label ||
+      item?.name === configStage.id
+    )
+
+    if (!savedStage) {
+      return {
+        ...configStage,
+        status:
+          configStage.id === 'idea'
+            ? 'completed'
+            : configStage.id === 'research'
+              ? 'active'
+              : 'locked'
+      }
+    }
+
     return {
-      ...stage,
-      status: match.status === 'done' ? 'completed' : match.status === 'inprogress' ? 'active' : match.status === 'available' ? 'available' : match.status === 'completed' ? 'completed' : 'locked'
+      ...savedStage,
+      ...configStage,
+      status: normalizeWorkflowStatus(savedStage.status)
     }
   })
+
+  // Migration chỉ tiến trạng thái về phía trước; không hạ completed xuống active.
+  normalized = normalized.map((stage) => {
+    if (stage.status !== 'locked' || !stage.previousStage) return stage
+
+    const previousStage = normalized.find(
+      (candidate) => candidate.id === stage.previousStage
+    )
+
+    return previousStage?.status === 'completed'
+      ? { ...stage, status: 'available' }
+      : stage
+  })
+
+  return normalized
 }
 
 function ensureStoryboardFields(project) {
@@ -1189,86 +1225,59 @@ export default function App() {
   )
 }
 
-  useEffect(() => {
-    const storedProject = loadProject()
-    const storedStage = loadCurrentStage()
-    const storedDNA = loadProjectDNA()
-    const storedWorkflow = loadWorkflow()
-    if (storedProject && storedProject.id) {
-      let workflow = normalizeWorkflow(Array.isArray(storedProject.workflow) ? storedProject.workflow : storedWorkflow || WorkflowEngine.createInitialWorkflow())
-      // Backward-compatible reconciliation:
-      // If Humanize is completed and Voice Script is still locked, and Storyboard not completed,
-      // activate Voice Script so users with older saved projects can continue.
-      try {
-        const humanizeStage = workflow.find(s => s.id === 'humanize')
-        const voiceStage = workflow.find(s => s.id === 'voiceScript')
-        const storyboardStage = workflow.find(s => s.id === 'storyboard')
-        const imagePromptStage = workflow.find(s => s.id === 'imagePrompt')
-        if (humanizeStage && humanizeStage.status === 'completed' && voiceStage && voiceStage.status === 'locked' && storyboardStage && storyboardStage.status !== 'completed') {
-          // set voice script active but keep storyboard locked
-          workflow = workflow.map(s => {
-            if (s.id === 'voiceScript') return { ...s, status: 'active' }
-            return s
-          })
-        }
-        // Repair legacy inconsistent Storyboard state
-        if ( voiceStage &&
-          voiceStage.status === 'completed' &&
-          storyboardStage &&
-          storyboardStage.status === 'completed' &&
-          imagePromptStage &&
-          imagePromptStage.status === 'locked'
-        ) {
-          workflow = workflow.map(s => {
-            if (s.id === 'storyboard') {
-              return { ...s, status: 'active' }
-         }
-         return s
-         })
-        }
-      } catch (e) {
-        // ignore reconciliation errors
-      }
-      const normalizedProject = ensureStoryboardFields(storedProject)
-      const projectWithDNA = normalizedProject.dna ? { ...normalizedProject, workflow } : { ...normalizedProject, workflow, dna: storedDNA || createProjectDNA(normalizedProject) }
-      if (!projectWithDNA.dna) {
-        projectWithDNA.dna = createProjectDNA(normalizedProject)
-      }
-      setProjects([projectWithDNA])
-      setViewProjectId(projectWithDNA.id)
-      if (!projectWithDNA.dna) {
-        saveProjectDNA()
-      }
-      // persist reconciled workflow
-      saveWorkflow(workflow)
-      // If we reconciled to make voiceScript active and the stored stage was humanize/dashboard/null,
-      // allow navigation directly to Voice Script.
-      const reconciledVoiceActive = workflow.find(s => s.id === 'voiceScript' && s.status === 'active')
-      if (reconciledVoiceActive && (storedStage === 'humanize' || !storedStage || storedStage === 'dashboard')) {
-        setCurrentStage('voiceScript')
-      } else {
-        setCurrentStage(storedStage)
-      }
-      if (storedStage === 'outline') {
-        setViewMode('outline')
-      } else if (storedStage === 'research') {
-        setViewMode('research')
-      } else if (storedStage === 'script') {
-        setViewMode('script')
-      } else if (storedStage === 'humanize') {
-        // If we set voiceScript active above and currentStage was humanize, switch view to voiceScript
-        if (reconciledVoiceActive && (storedStage === 'humanize' || !storedStage || storedStage === 'dashboard')) {
-          setViewMode('voiceScript')
-        } else {
-          setViewMode('humanize')
-        }
-      } else if (storedStage === 'storyboard') {
-        setViewMode('storyboard')
-      } else {
-        setViewMode('dashboard')
-      }
-    }
-  }, [])
+ useEffect(() => {
+  const storedProject = loadProject()
+  const storedStage = loadCurrentStage()
+  const storedDNA = loadProjectDNA()
+  const storedWorkflow = loadWorkflow()
+
+  if (!storedProject || !storedProject.id) {
+    return
+  }
+
+  const workflowSource = Array.isArray(storedProject.workflow)
+    ? storedProject.workflow
+    : storedWorkflow
+
+  const workflow = normalizeWorkflow(workflowSource)
+  const normalizedProject = ensureStoryboardFields(storedProject)
+
+  const projectWithDNA = {
+    ...normalizedProject,
+    workflow,
+    dna:
+      normalizedProject.dna ||
+      storedDNA ||
+      createProjectDNA(normalizedProject)
+  }
+
+  setProjects([projectWithDNA])
+  setViewProjectId(projectWithDNA.id)
+
+  // Lưu workflow đã migrate vào cả hai nơi.
+  saveProject(projectWithDNA)
+  saveWorkflow(workflow)
+
+  setCurrentStage(storedStage)
+
+  if (storedStage === 'research') {
+    setViewMode('research')
+  } else if (storedStage === 'outline') {
+    setViewMode('outline')
+  } else if (storedStage === 'script') {
+    setViewMode('script')
+  } else if (storedStage === 'humanize') {
+    setViewMode('humanize')
+  } else if (storedStage === 'voiceScript') {
+    setViewMode('voiceScript')
+  } else if (storedStage === 'storyboard') {
+    setViewMode('storyboard')
+  } else if (storedStage === 'imagePrompt') {
+    setViewMode('imagePrompt')
+  } else {
+    setViewMode('dashboard')
+  }
+}, [])
 
   useEffect(() => {
     if (!viewProjectId) return
@@ -1686,14 +1695,44 @@ export default function App() {
     })
   }
 
-  function saveStoryboard(id) {
-    setProjects(prev => {
-      const next = prev.map(p => p.id === id ? { ...p, storyboardSaved: true } : p)
-      const active = next.find(p => p.id === id)
-      if (active) saveProject(active)
-      return next
-    })
-  }
+ function saveStoryboard(id) {
+  setProjects(prev => {
+    const project = prev.find(p => p.id === id)
+
+    if (!project) {
+      setMessage('Không tìm thấy dự án.')
+      return prev
+    }
+
+    const { workflow: completedWorkflow, error: completeError } =
+      WorkflowEngine.completeStage(
+        project.workflow,
+        'storyboard'
+      )
+
+    if (completeError) {
+      setMessage(completeError)
+      return prev
+    }
+
+    const nextProject = {
+      ...project,
+      storyboardSaved: true,
+      workflow: completedWorkflow
+    }
+
+    const next = prev.map(p =>
+      p.id === id ? nextProject : p
+    )
+
+    saveProject(nextProject)
+    saveWorkflow(completedWorkflow)
+
+    setMessage('Storyboard đã được lưu và hoàn thành.')
+
+    return next
+  })
+}
 
   function completeResearch(id) {
     const project = projects.find(p => p.id === id)
@@ -1818,22 +1857,69 @@ export default function App() {
     setMessage('')
   }
 
-  function handleOpenStoryboard() {
-    if (!activeProject) return
-    const { workflow: nextWorkflow, error } = WorkflowEngine.enterStage(activeProject.workflow, 'storyboard', activeProject)
-    if (error) {
-      setMessage(error)
-      return
-    }
-    const nextProject = { ...activeProject, workflow: nextWorkflow }
-    replaceProjectInState(nextProject)
-    setViewProjectId(activeProject.id)
-    setViewMode('storyboard')
-    setCurrentStage('storyboard')
-    saveProject(nextProject)
-    saveWorkflow(nextWorkflow)
-    setMessage('')
+ function handleOpenStoryboard() {
+  if (!activeProject) return
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      activeProject.workflow,
+      'storyboard',
+      activeProject
+    )
+
+  if (error) {
+    setMessage(error)
+    return
   }
+
+  const nextProject = {
+    ...activeProject,
+    workflow: nextWorkflow
+  }
+
+  replaceProjectInState(nextProject)
+
+  setViewProjectId(activeProject.id)
+  setViewMode('storyboard')
+  setCurrentStage('storyboard')
+
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+
+  setMessage('')
+}
+
+function handleOpenImagePrompt() {
+  if (!activeProject) return
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      activeProject.workflow,
+      'imagePrompt',
+      activeProject
+    )
+
+  if (error) {
+    setMessage(error)
+    return
+  }
+
+  const nextProject = {
+    ...activeProject,
+    workflow: nextWorkflow
+  }
+
+  replaceProjectInState(nextProject)
+
+  setViewProjectId(activeProject.id)
+  setViewMode('imagePrompt')
+  setCurrentStage('imagePrompt')
+
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+
+  setMessage('')
+}
 
   function handleOpenProjectCard() {
     if (!activeProject) {
@@ -1932,7 +2018,22 @@ export default function App() {
                 <h2>Workflow</h2>
                 <div className="steps">
                   {activeProject?.workflow?.map((stage, i) => {
-                    const action = stage.id === 'research' ? handleOpenResearch : stage.id === 'outline' ? handleOpenOutline : stage.id === 'script' ? handleOpenScript : stage.id === 'humanize' ? handleOpenHumanize : stage.id === 'voiceScript' ? handleOpenVoiceScript : stage.id === 'storyboard' ? handleOpenStoryboard : undefined
+                    const action =
+  stage.id === 'research'
+    ? handleOpenResearch
+    : stage.id === 'outline'
+      ? handleOpenOutline
+      : stage.id === 'script'
+        ? handleOpenScript
+        : stage.id === 'humanize'
+          ? handleOpenHumanize
+          : stage.id === 'voiceScript'
+            ? handleOpenVoiceScript
+            : stage.id === 'storyboard'
+              ? handleOpenStoryboard
+              : stage.id === 'imagePrompt'
+                ? handleOpenImagePrompt
+                : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (
@@ -2004,16 +2105,51 @@ export default function App() {
             />
           )}
           {activeProject && viewMode === 'storyboard' && (
-            <StoryboardView
-              project={activeProject}
-              onGenerateStoryboardPrompt={(prompt) => saveGeneratedStoryboardPrompt(activeProject.id, prompt)}
-              onUpdateRawStoryboardResult={(raw) => updateRawStoryboardResult(activeProject.id, raw)}
-              onUpdateStoryboardScenes={(scenes) => updateStoryboardScenes(activeProject.id, scenes)}
-              onSaveStoryboard={() => saveStoryboard(activeProject.id)}
-              onBackToHumanize={() => { setViewMode('humanize'); setCurrentStage('humanize') }}
-              onBackToDashboard={() => { setViewMode('dashboard'); setMessage('') }}
-            />
-          )}
+  <StoryboardView
+    project={activeProject}
+    onGenerateStoryboardPrompt={(prompt) =>
+      saveGeneratedStoryboardPrompt(activeProject.id, prompt)
+    }
+    onUpdateRawStoryboardResult={(raw) =>
+      updateRawStoryboardResult(activeProject.id, raw)
+    }
+    onUpdateStoryboardScenes={(scenes) =>
+      updateStoryboardScenes(activeProject.id, scenes)
+    }
+    onSaveStoryboard={() =>
+      saveStoryboard(activeProject.id)
+    }
+    onBackToHumanize={() => {
+      setViewMode('humanize')
+      setCurrentStage('humanize')
+    }}
+    onBackToDashboard={() => {
+      setViewMode('dashboard')
+      setMessage('')
+    }}
+  />
+)}
+
+{activeProject && viewMode === 'imagePrompt' && (
+  <ImagePromptController
+    project={activeProject}
+
+    onProjectChange={(nextProject) => {
+      replaceProjectInState(nextProject)
+      saveProject(nextProject)
+    }}
+
+    onBackToStoryboard={() => {
+      setViewMode('storyboard')
+      setCurrentStage('storyboard')
+    }}
+
+    onBackToDashboard={() => {
+      setViewMode('dashboard')
+      setMessage('')
+    }}
+  />
+)}
           {viewMode === 'studio' && (
             <StudioSettings />
           )}

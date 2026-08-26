@@ -105,20 +105,20 @@ export const WORKFLOW_STAGES = [
     nextStage: 'storyboard'
   },
   {
-    id: 'imagePrompt',
-    number: 8,
-    label: 'Image Prompt',
-    statusLabel: {
-      locked: 'Chưa mở khóa',
-      available: 'Sẵn sàng',
-      active: 'Đang thực hiện',
-      completed: 'Hoàn thành'
-    },
-    requiredInputs: ['voiceScript.completed'],
-    producedOutputs: ['imagePrompt.completed'],
-    previousStage: 'voiceScript',
-    nextStage: 'geminiFlow'
+  id: 'imagePrompt',
+  number: 8,
+  label: 'Image Prompt',
+  statusLabel: {
+    locked: 'Chưa mở khóa',
+    available: 'Sẵn sàng',
+    active: 'Đang thực hiện',
+    completed: 'Hoàn thành'
   },
+  requiredInputs: ['storyboard.completed'],
+  producedOutputs: ['imagePrompt.completed'],
+  previousStage: 'storyboard',
+  nextStage: 'geminiFlow'
+},
   {
     id: 'geminiFlow',
     number: 9,
