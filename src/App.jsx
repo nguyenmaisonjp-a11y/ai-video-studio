@@ -1131,8 +1131,7 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
       return
     }
 
-    onUpdateStoryboardScenes(normalizedScenes)
-    onSaveStoryboard()
+    onSaveStoryboard(normalizedScenes)
 
     setScenesText(
       JSON.stringify(normalizedScenes, null, 2)
@@ -1695,43 +1694,37 @@ export default function App() {
     })
   }
 
- function saveStoryboard(id) {
-  setProjects(prev => {
-    const project = prev.find(p => p.id === id)
+ function saveStoryboard(id, storyboardScenes) {
+  const project = projects.find(item => item.id === id)
 
-    if (!project) {
-      setMessage('Không tìm thấy dự án.')
-      return prev
-    }
+  if (!project) {
+    setMessage('Không tìm thấy dự án.')
+    return
+  }
 
-    const { workflow: completedWorkflow, error: completeError } =
-      WorkflowEngine.completeStage(
-        project.workflow,
-        'storyboard'
-      )
-
-    if (completeError) {
-      setMessage(completeError)
-      return prev
-    }
-
-    const nextProject = {
-      ...project,
-      storyboardSaved: true,
-      workflow: completedWorkflow
-    }
-
-    const next = prev.map(p =>
-      p.id === id ? nextProject : p
+  const { workflow: completedWorkflow, error } =
+    WorkflowEngine.completeStage(
+      project.workflow,
+      'storyboard'
     )
 
-    saveProject(nextProject)
-    saveWorkflow(completedWorkflow)
+  if (error) {
+    setMessage(error)
+    return
+  }
 
-    setMessage('Storyboard đã được lưu và hoàn thành.')
+  const nextProject = {
+    ...project,
+    storyboardScenes,
+    storyboardSaved: true,
+    workflow: completedWorkflow
+  }
 
-    return next
-  })
+  replaceProjectInState(nextProject)
+  saveProject(nextProject)
+  saveWorkflow(completedWorkflow)
+
+  setMessage('Storyboard đã được lưu và hoàn thành.')
 }
 
   function completeResearch(id) {
@@ -2116,8 +2109,8 @@ function handleOpenImagePrompt() {
     onUpdateStoryboardScenes={(scenes) =>
       updateStoryboardScenes(activeProject.id, scenes)
     }
-    onSaveStoryboard={() =>
-      saveStoryboard(activeProject.id)
+    onSaveStoryboard={(scenes) =>
+      saveStoryboard(activeProject.id, scenes)
     }
     onBackToHumanize={() => {
       setViewMode('humanize')
