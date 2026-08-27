@@ -1915,25 +1915,29 @@ function handleOpenImagePrompt() {
 }
 
   function handleOpenProjectCard() {
-    if (!activeProject) {
-      setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
-      return
-    }
-    if (currentStage === 'script') {
-      setViewMode('script')
-    } else if (currentStage === 'humanize') {
-      setViewMode('humanize')
-    } else if (currentStage === 'storyboard') {
-      setViewMode('storyboard')
-    } else if (currentStage === 'outline') {
-      setViewMode('outline')
-    } else if (currentStage === 'research') {
-      setViewMode('research')
-    } else {
-      setViewMode('dashboard')
-    }
-    setMessage('')
+  if (!activeProject) {
+    setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
+    return
   }
+
+  const supportedStages = [
+    'research',
+    'outline',
+    'script',
+    'humanize',
+    'voiceScript',
+    'storyboard',
+    'imagePrompt'
+  ]
+
+  setViewMode(
+    supportedStages.includes(currentStage)
+      ? currentStage
+      : 'dashboard'
+  )
+
+  setMessage('')
+}
 
   function handleResetProject() {
     if (!activeProject) return
@@ -2130,6 +2134,10 @@ function handleOpenImagePrompt() {
     onProjectChange={(nextProject) => {
       replaceProjectInState(nextProject)
       saveProject(nextProject)
+
+     if (Array.isArray(nextProject.workflow)) {
+      saveWorkflow(nextProject.workflow)
+     }
     }}
 
     onBackToStoryboard={() => {
