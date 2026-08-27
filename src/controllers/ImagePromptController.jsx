@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ImagePromptView from '../views/ImagePromptView.jsx'
 import { ImagePromptService } from '../services/imagePromptService.js'
+import { WorkflowEngine } from '../workflow/workflowEngine.js'
 
 export default function ImagePromptController({
   project,
@@ -16,11 +17,53 @@ export default function ImagePromptController({
         throw new Error('Không tìm thấy project.')
       }
 
+      if (typeof onProjectChange !== 'function') {
+        throw new Error(
+          'Image Prompt Controller chưa được nối với project state.'
+        )
+      }
+
       const storyboardScenes = Array.isArray(
         payload?.storyboardScenes
       )
         ? payload.storyboardScenes
         : project.storyboardScenes || []
+
+      const imagePromptStage = project.workflow?.find(
+        stage => stage.id === 'imagePrompt'
+      )
+
+      if (!imagePromptStage) {
+        throw new Error(
+          'Giai đoạn Image Prompt không tồn tại trong workflow.'
+        )
+      }
+
+      let nextWorkflow = project.workflow
+
+      // Cho phép lưu lại prompt nếu stage đã completed.
+      if (
+        imagePromptStage.status === 'active' ||
+        imagePromptStage.status === 'available'
+      ) {
+        const {
+          workflow: completedWorkflow,
+          error: workflowError
+        } = WorkflowEngine.completeStage(
+          project.workflow,
+          'imagePrompt'
+        )
+
+        if (workflowError) {
+          throw new Error(workflowError)
+        }
+
+        nextWorkflow = completedWorkflow
+      } else if (imagePromptStage.status !== 'completed') {
+        throw new Error(
+          `Không thể hoàn thành Image Prompt khi trạng thái hiện tại là '${imagePromptStage.status}'.`
+        )
+      }
 
       const nextProject = {
         ...project,
@@ -36,17 +79,12 @@ export default function ImagePromptController({
 
         storyboardScenes,
 
-        imagePromptSaved: true
-      }
+        imagePromptSaved: true,
 
-      if (typeof onProjectChange !== 'function') {
-        throw new Error(
-          'Image Prompt Controller chưa được nối với project state.'
-        )
+        workflow: nextWorkflow
       }
 
       onProjectChange(nextProject)
-
       setError('')
     } catch (err) {
       setError(

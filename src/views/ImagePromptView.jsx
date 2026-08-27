@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ImagePromptService } from '../services/imagePromptService.js'
 
 export default function ImagePromptView({
@@ -11,13 +11,68 @@ export default function ImagePromptView({
     ? project.storyboardScenes
     : []
 
-  const [generatedPrompt, setGeneratedPrompt] = useState('')
-  const [rawResult, setRawResult] = useState('')
-  const [parsedResult, setParsedResult] = useState(null)
-  const [error, setError] = useState('')
-  const [copyStatus, setCopyStatus] = useState('')
-  const [parseStatus, setParseStatus] = useState('')
-  const [saveStatus, setSaveStatus] = useState('')
+  const [generatedPrompt, setGeneratedPrompt] = useState(
+  project?.generatedImagePrompt || ''
+)
+
+const [rawResult, setRawResult] = useState(
+  project?.rawImagePromptResult || ''
+)
+
+const [parsedResult, setParsedResult] = useState(
+  project?.parsedImagePromptResult || null
+)
+
+const [error, setError] = useState('')
+const [copyStatus, setCopyStatus] = useState('')
+
+const [parseStatus, setParseStatus] = useState(
+  project?.parsedImagePromptResult?.scenes
+    ? `JSON đã lưu. Có ${project.parsedImagePromptResult.scenes.length} scene.`
+    : ''
+)
+
+const [saveStatus, setSaveStatus] = useState(
+  project?.imagePromptSaved
+    ? 'Image Prompt đã được lưu.'
+    : ''
+)
+
+useEffect(() => {
+  setGeneratedPrompt(
+    project?.generatedImagePrompt || ''
+  )
+
+  setRawResult(
+    project?.rawImagePromptResult || ''
+  )
+
+  setParsedResult(
+    project?.parsedImagePromptResult || null
+  )
+
+  if (project?.parsedImagePromptResult?.scenes) {
+    setParseStatus(
+      `JSON đã lưu. Có ${project.parsedImagePromptResult.scenes.length} scene.`
+    )
+  } else {
+    setParseStatus('')
+  }
+
+  setSaveStatus(
+    project?.imagePromptSaved
+      ? 'Image Prompt đã được lưu.'
+      : ''
+  )
+
+  setError('')
+}, [
+  project?.id,
+  project?.generatedImagePrompt,
+  project?.rawImagePromptResult,
+  project?.parsedImagePromptResult,
+  project?.imagePromptSaved
+])
 
   const summary = useMemo(() => {
     const totalScenes = scenes.length
