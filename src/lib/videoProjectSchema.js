@@ -1,4 +1,5 @@
-export const VIDEO_PROJECT_SCHEMA_VERSION = 2
+export const VIDEO_PROJECT_SCHEMA_VERSION = 3
+
 export function createEmptyGenerations() {
   return {
     image: {
@@ -6,11 +7,20 @@ export function createEmptyGenerations() {
       provider: 'gemini',
       prompt: '',
       negativePrompt: '',
+
+      // assetId sẽ liên kết tới file ảnh trong Image Library.
       assetId: '',
       fileName: '',
-      createdAt: null
+      mimeType: '',
+      sizeBytes: null,
+      width: null,
+      height: null,
+
+      createdAt: null,
+      importedAt: null
     },
 
+    // Để sẵn cấu trúc cho tính năng tạo video trong tương lai.
     video: {
       status: 'not_started',
       provider: 'flow',
@@ -18,8 +28,11 @@ export function createEmptyGenerations() {
       sourceImageAssetId: '',
       assetId: '',
       fileName: '',
+      mimeType: '',
+      sizeBytes: null,
       durationSec: null,
-      createdAt: null
+      createdAt: null,
+      importedAt: null
     }
   }
 }
@@ -62,11 +75,16 @@ export function createVideoProjectData(project = {}) {
 }
 
 export function normalizeScene(scene = {}, index = 0) {
-  const sceneNumber = Number(scene.sceneNumber || scene.scene || index + 1)
+  const sceneNumber = Number(
+    scene.sceneNumber ||
+    scene.scene ||
+    index + 1
+  )
+
+  const emptyGenerations = createEmptyGenerations()
 
   return {
     ...createEmptyScene(sceneNumber),
-
     ...scene,
 
     sceneId:
@@ -94,28 +112,28 @@ export function normalizeScene(scene = {}, index = 0) {
       scene.visualDescription ||
       scene.visual ||
       '',
-      
-   generations: {
-  image: {
-    ...createEmptyGenerations().image,
-    ...(scene.generations?.image || {}),
 
-    prompt:
-      scene.generations?.image?.prompt ||
-      scene.imagePrompt ||
-      '',
+    generations: {
+      image: {
+        ...emptyGenerations.image,
+        ...(scene.generations?.image || {}),
 
-    negativePrompt:
-      scene.generations?.image?.negativePrompt ||
-      scene.negativePrompt ||
-      ''
-  },
+        prompt:
+          scene.generations?.image?.prompt ||
+          scene.imagePrompt ||
+          '',
 
-  video: {
-    ...createEmptyGenerations().video,
-    ...(scene.generations?.video || {})
-  }
-}   
+        negativePrompt:
+          scene.generations?.image?.negativePrompt ||
+          scene.negativePrompt ||
+          ''
+      },
+
+      video: {
+        ...emptyGenerations.video,
+        ...(scene.generations?.video || {})
+      }
+    }
   }
 }
 
