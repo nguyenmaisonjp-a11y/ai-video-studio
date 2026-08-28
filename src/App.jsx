@@ -1761,8 +1761,9 @@ export default function App() {
   const progressPercent = activeProject ? WorkflowEngine.getProgress(activeProject.workflow) : 17
 
   function handleOpenDashboard() {
-    setViewMode('dashboard')
-    setMessage('')
+  setViewMode('dashboard')
+  setCurrentStage('dashboard')
+  setMessage('')
   }
 
   function handleOpenResearch() {
@@ -2122,7 +2123,7 @@ function handleOpenGeminiFlow() {
               onSaveHumanizedScript={() => saveHumanizedScript(activeProject.id)}
               onCompleteHumanize={() => completeHumanize(activeProject.id)}
               onBackToScript={() => { setViewMode('script'); setCurrentStage('script') }}
-              onBackToDashboard={() => { setViewMode('dashboard'); setMessage('') }}
+              onBackToDashboard={handleOpenDashboard}
             />
           )}
           {activeProject && viewMode === 'voiceScript' && (
@@ -2206,10 +2207,7 @@ function handleOpenGeminiFlow() {
       setCurrentStage('imagePrompt')
     }}
 
-    onBackToDashboard={() => {
-      setViewMode('dashboard')
-      setMessage('')
-    }}
+    onBackToDashboard={handleOpenDashboard}
   />
 )}
           {viewMode === 'studio' && (
