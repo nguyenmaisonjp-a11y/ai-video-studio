@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { ResearchEngine, OutlineEngine, ScriptEngine, HumanizeEngine, StoryboardEngine, VoiceScriptEngine } from './brain'
 import { generateOutlineBrief } from './lib/outlineBrain.js'
 import ImagePromptController from './controllers/ImagePromptController.jsx'
+import GeminiFlowController from './controllers/GeminiFlowController.jsx'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { normalizeScenes } from './lib/videoProjectSchema.js'
 import { validateStoryboardScenes } from './lib/storyboardValidator.js'
@@ -1272,9 +1273,11 @@ export default function App() {
   } else if (storedStage === 'storyboard') {
     setViewMode('storyboard')
   } else if (storedStage === 'imagePrompt') {
-    setViewMode('imagePrompt')
+  setViewMode('imagePrompt')
+  } else if (storedStage === 'geminiFlow') {
+  setViewMode('geminiFlow')
   } else {
-    setViewMode('dashboard')
+  setViewMode('dashboard')
   }
 }, [])
 
@@ -1913,6 +1916,37 @@ function handleOpenImagePrompt() {
 
   setMessage('')
 }
+function handleOpenGeminiFlow() {
+  if (!activeProject) return
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      activeProject.workflow,
+      'geminiFlow',
+      activeProject
+    )
+
+  if (error) {
+    setMessage(error)
+    return
+  }
+
+  const nextProject = {
+    ...activeProject,
+    workflow: nextWorkflow
+  }
+
+  replaceProjectInState(nextProject)
+
+  setViewProjectId(activeProject.id)
+  setViewMode('geminiFlow')
+  setCurrentStage('geminiFlow')
+
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+
+  setMessage('')
+}
 
   function handleOpenProjectCard() {
   if (!activeProject) {
@@ -1927,7 +1961,8 @@ function handleOpenImagePrompt() {
     'humanize',
     'voiceScript',
     'storyboard',
-    'imagePrompt'
+    'imagePrompt',
+    'geminiFlow'
   ]
 
   setViewMode(
@@ -2030,7 +2065,9 @@ function handleOpenImagePrompt() {
               ? handleOpenStoryboard
               : stage.id === 'imagePrompt'
                 ? handleOpenImagePrompt
-                : undefined
+                : stage.id === 'geminiFlow'
+                  ? handleOpenGeminiFlow
+                  : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
                     return (
@@ -2143,6 +2180,30 @@ function handleOpenImagePrompt() {
     onBackToStoryboard={() => {
       setViewMode('storyboard')
       setCurrentStage('storyboard')
+    }}
+
+    onBackToDashboard={() => {
+      setViewMode('dashboard')
+      setMessage('')
+    }}
+  />
+)}
+{activeProject && viewMode === 'geminiFlow' && (
+  <GeminiFlowController
+    project={activeProject}
+
+    onProjectChange={(nextProject) => {
+      replaceProjectInState(nextProject)
+      saveProject(nextProject)
+
+      if (Array.isArray(nextProject.workflow)) {
+        saveWorkflow(nextProject.workflow)
+      }
+    }}
+
+    onBackToImagePrompt={() => {
+      setViewMode('imagePrompt')
+      setCurrentStage('imagePrompt')
     }}
 
     onBackToDashboard={() => {

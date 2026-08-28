@@ -1,4 +1,28 @@
-export const VIDEO_PROJECT_SCHEMA_VERSION = 1
+export const VIDEO_PROJECT_SCHEMA_VERSION = 2
+export function createEmptyGenerations() {
+  return {
+    image: {
+      status: 'not_started',
+      provider: 'gemini',
+      prompt: '',
+      negativePrompt: '',
+      assetId: '',
+      fileName: '',
+      createdAt: null
+    },
+
+    video: {
+      status: 'not_started',
+      provider: 'flow',
+      prompt: '',
+      sourceImageAssetId: '',
+      assetId: '',
+      fileName: '',
+      durationSec: null,
+      createdAt: null
+    }
+  }
+}
 
 export function createEmptyScene(sceneNumber = 1) {
   return {
@@ -20,7 +44,8 @@ export function createEmptyScene(sceneNumber = 1) {
     subjectConsistency: '',
     notes: '',
     imageStatus: 'pending',
-    voiceStatus: 'pending'
+    voiceStatus: 'pending',
+    generations: createEmptyGenerations()
   }
 }
 
@@ -68,7 +93,29 @@ export function normalizeScene(scene = {}, index = 0) {
       scene.visualObjective ||
       scene.visualDescription ||
       scene.visual ||
+      '',
+      
+   generations: {
+  image: {
+    ...createEmptyGenerations().image,
+    ...(scene.generations?.image || {}),
+
+    prompt:
+      scene.generations?.image?.prompt ||
+      scene.imagePrompt ||
+      '',
+
+    negativePrompt:
+      scene.generations?.image?.negativePrompt ||
+      scene.negativePrompt ||
       ''
+  },
+
+  video: {
+    ...createEmptyGenerations().video,
+    ...(scene.generations?.video || {})
+  }
+}   
   }
 }
 
