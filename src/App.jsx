@@ -283,12 +283,6 @@ function ResearchView({ project, onUpdateResearch, onCompleteResearch }) {
   const [saved, setSaved] = useState(project.research?.resultSaved || false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    setResearch(project.research || { goal:'', keyQuestions:'', sources:'', prompt:'', result:'', resultSaved:false })
-    setResultText(project.research?.result || '')
-    setSaved(project.research?.resultSaved || false)
-  }, [project.research])
-
   function updateResearchField(field, value) {
     const next = { ...research, [field]: value }
     setResearch(next)
