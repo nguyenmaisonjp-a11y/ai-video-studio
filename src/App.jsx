@@ -908,19 +908,6 @@ function VoiceScriptView({ project, studioDNA, onUpdateVoiceBrief, onSaveGenerat
   const [mustAvoid, setMustAvoid] = useState(project.voiceMustAvoid || 'Theatrical directions, invented facts')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    setPrompt(project.generatedVoiceScriptPrompt || '')
-    setResult(project.voiceScriptResult || '')
-    setSaved(project.voiceScriptSaved || false)
-    setVoiceObjective(project.voiceObjective || (project.dna?.coreIdea || 'Make narration conversational and clear'))
-    setNarrationStyle(project.narrationStyle || (studioDNA?.preferredNarrationStyle || 'Natural, measured'))
-    setPace(project.pace || 'Moderate')
-    setPauseStrategy(project.pauseStrategy || 'Short pauses at commas, longer at paragraph ends')
-    setEmphasisStrategy(project.emphasisStrategy || 'Restrained emphasis for key facts')
-    setPronunciationNotes(project.pronunciationNotes || '')
-    setMustPreserve(project.voiceMustPreserve || 'Facts, statistics, source meaning')
-    setMustAvoid(project.voiceMustAvoid || 'Theatrical directions, invented facts')
-  }, [project.generatedVoiceScriptPrompt, project.voiceScriptResult, project.voiceScriptSaved, project.voiceObjective, project.narrationStyle, project.pace, project.pauseStrategy, project.emphasisStrategy, project.pronunciationNotes, project.voiceMustPreserve, project.voiceMustAvoid])
 
   function generatePrompt() {
     try {
