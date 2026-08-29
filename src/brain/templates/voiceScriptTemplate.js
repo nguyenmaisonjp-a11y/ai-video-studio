@@ -1,9 +1,16 @@
 export function VOICESCRIPT_TEMPLATE(input) {
   const {
-    topic, language, audience, duration, projectDNA, studioDNA,
+    language,
+    duration,
     humanizedScriptResult,
-    voiceObjective, narrationStyle, pace, pauseStrategy, emphasisStrategy, pronunciationNotes,
-    mustPreserve, mustAvoid
+    voiceObjective,
+    narrationStyle,
+    pace,
+    pauseStrategy,
+    emphasisStrategy,
+    pronunciationNotes,
+    mustPreserve,
+    mustAvoid
   } = input
 
   const lines = []

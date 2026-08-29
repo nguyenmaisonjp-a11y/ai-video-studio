@@ -1,4 +1,4 @@
-import { getOutputLanguageInstruction, detectTopicLanguage } from '../utils/language.js'
+
 import { cleanText } from '../utils/formatter.js'
 import { STORYBOARD_TEMPLATE } from '../templates/storyboardTemplate.js'
 

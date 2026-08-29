@@ -1,5 +1,4 @@
-import { getOutputLanguageInstruction, detectTopicLanguage } from '../utils/language.js'
-import { cleanText, valueOrNotSpecified } from '../utils/formatter.js'
+import { cleanText } from '../utils/formatter.js'
 
 import { SCRIPT_TEMPLATE } from '../templates/scriptTemplate.js'
 

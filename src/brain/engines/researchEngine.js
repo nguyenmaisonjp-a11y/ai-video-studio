@@ -20,6 +20,7 @@ const RESEARCH_TEMPLATE = ({ topic, objective, language, market, audience, keyQu
     'PROJECT BRIEF:',
     `Topic: ${normalizedTopic}`,
     `Target Market: ${normalizedMarket}`,
+    `Target Audience: ${normalizedAudience}`,
     `Output Language: ${language || normalizedLanguage}`,
     `Desired Emotions: ${normalizedEmotions}`,
     '',

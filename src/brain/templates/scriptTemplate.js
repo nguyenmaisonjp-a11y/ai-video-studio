@@ -10,7 +10,6 @@ export function SCRIPT_TEMPLATE(input) {
     duration,
     style,
     audience,
-    emotions,
     projectDNA,
     scriptObjective,
     narrationTone,
