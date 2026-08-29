@@ -580,17 +580,7 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onUp
   const [scriptResult, setScriptResult] = useState(project.scriptResult || '')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    setBrief(project.scriptBrief || {
-      scriptObjective: project.scriptObjective || project.dna?.storyStyle || 'Explain the core argument clearly',
-      narrationTone: project.narrationTone || project.dna?.narrationStyle || 'Calm, intelligent, evidence-based',
-      retentionStrategy: project.retentionStrategy || 'Start with a question and use curiosity gaps',
-      mustPreserve: project.mustPreserve || project.dna?.contentRules || '',
-      mustAvoid: project.mustAvoid || ''
-    })
-    setGeneratedPrompt(project.generatedScriptPrompt || '')
-    setScriptResult(project.scriptResult || '')
-  }, [project])
+  
 
   function updateField(field, value) {
     const next = { ...brief, [field]: value }
