@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { GeminiFlowService } from '../services/geminiFlowService.js'
 
 export default function GeminiFlowView({
@@ -10,19 +10,18 @@ export default function GeminiFlowView({
   onBackToImagePrompt,
   onBackToDashboard
 }) {
-  const [fileNames, setFileNames] = useState({})
-  const [copyStatus, setCopyStatus] = useState('')
+  const [fileNames, setFileNames] = useState(() => {
+  const initialFileNames = {}
 
-  useEffect(() => {
-    const nextFileNames = {}
+  scenes.forEach(scene => {
+    initialFileNames[scene.sceneId] =
+      scene.generations?.image?.fileName || ''
+  })
 
-    scenes.forEach(scene => {
-      nextFileNames[scene.sceneId] =
-        scene.generations?.image?.fileName || ''
-    })
+  return initialFileNames
+})
 
-    setFileNames(nextFileNames)
-  }, [scenes])
+const [copyStatus, setCopyStatus] = useState('')
 
   const progress = useMemo(
     () => GeminiFlowService.getProgress(scenes),
@@ -140,8 +139,9 @@ export default function GeminiFlowView({
             scene.generations?.image || {}
 
           const completed =
-            image.status === 'generated' ||
-            image.status === 'downloaded'
+  image.status === 'generated' ||
+  image.status === 'downloaded' ||
+  image.status === 'imported'
 
           return (
             <article

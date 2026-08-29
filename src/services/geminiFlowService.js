@@ -5,7 +5,8 @@ import {
 
 const IMAGE_READY_STATUSES = new Set([
   'generated',
-  'downloaded'
+  'downloaded',
+  'imported'
 ])
 
 function getSceneId(scene = {}) {
