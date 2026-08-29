@@ -453,11 +453,9 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
       })
 
       const next = { ...outline, prompt }
-      setOutline(next)
-      onUpdateOutline(next)
-      // also persist generated prompt on project as generatedOutlinePrompt
-      try { project.generatedOutlinePrompt = prompt } catch (e) {}
-      setError('')
+setOutline(next)
+onUpdateOutline(next)
+setError('')
     } catch (err) {
       setError(err.message || 'Không thể tạo Outline Prompt. Hãy kiểm tra lại thông tin.')
     }
