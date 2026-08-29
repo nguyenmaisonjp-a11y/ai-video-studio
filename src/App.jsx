@@ -726,17 +726,7 @@ function HumanizeView({ project, studioDNA, onUpdateHumanizedScript, onUpdateHum
   const [mustAvoid, setMustAvoid] = useState(project.humanizeMustAvoid || 'AI-sounding phrases, repetition, exaggerated emotion, invented facts')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    setText(project.humanizedScriptResult || '')
-    setSaved(project.humanizedScriptSaved || false)
-    setGeneratedPrompt(project.generatedHumanizePrompt || '')
-    setObjective(project.humanizeObjective || 'Make the script sound natural, spoken, intelligent and human.')
-    setNaturalnessLevel(project.naturalnessLevel || 'High')
-    setNarrationRhythm(project.narrationRhythm || 'Calm with sentence-length variation')
-    setRetentionStyle(project.retentionStyle || 'Curiosity, contrast, rhetorical questions, smooth transitions')
-    setMustPreserve(project.humanizeMustPreserve || 'Facts, statistics, source meaning, neutrality, core argument')
-    setMustAvoid(project.humanizeMustAvoid || 'AI-sounding phrases, repetition, exaggerated emotion, invented facts')
-  }, [project.humanizedScriptResult, project.humanizedScriptSaved, project.generatedHumanizePrompt, project.humanizeObjective, project.naturalnessLevel, project.narrationRhythm, project.retentionStyle, project.humanizeMustPreserve, project.humanizeMustAvoid])
+  
 
   function updateText(value) {
     setText(value)
