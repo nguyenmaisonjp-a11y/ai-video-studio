@@ -4,7 +4,7 @@ function safeParse(value) {
   if (typeof value !== 'string') return null
   try {
     return JSON.parse(value)
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -18,7 +18,7 @@ export function saveWorkflow(workflow) {
   if (!storage) return
   try {
     storage.setItem(WORKFLOW_KEY, JSON.stringify(workflow))
-  } catch (error) {
+  } catch {
     // ignore storage errors
   }
 }

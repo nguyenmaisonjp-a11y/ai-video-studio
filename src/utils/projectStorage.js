@@ -5,7 +5,7 @@ function safeParse(value) {
   if (typeof value !== 'string') return null
   try {
     return JSON.parse(value)
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -19,7 +19,7 @@ export function saveProject(project) {
   if (!storage) return
   try {
     storage.setItem(PROJECT_KEY, JSON.stringify(project))
-  } catch (error) {
+  } catch {
     // Ignore storage errors in development mode
   }
 }
@@ -44,7 +44,7 @@ export function saveCurrentStage(stage) {
   if (!storage) return
   try {
     storage.setItem(STAGE_KEY, JSON.stringify(stage))
-  } catch (error) {
+  } catch {
     // Ignore storage errors in development mode
   }
 }

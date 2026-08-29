@@ -10,9 +10,18 @@ function padSceneNumber(sceneNumber) {
 }
 
 function sanitizeFileName(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-')
+  const sanitized = Array.from(String(value || '').trim())
+    .map(character => {
+      const code = character.charCodeAt(0)
+      const forbidden = '<>:"/\\|?*'.includes(character)
+
+      return code <= 31 || forbidden
+        ? '-'
+        : character
+    })
+    .join('')
+
+  return sanitized
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')

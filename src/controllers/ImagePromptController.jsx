@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import ImagePromptView from '../views/ImagePromptView.jsx'
-import { ImagePromptService } from '../services/imagePromptService.js'
+
 import { WorkflowEngine } from '../workflow/workflowEngine.js'
 
 export default function ImagePromptController({

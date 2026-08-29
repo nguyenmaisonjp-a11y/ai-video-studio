@@ -112,7 +112,7 @@ export const WorkflowEngine = {
   }
 },
 
-  completeStage(workflow, stageId, output) {
+  completeStage(workflow, stageId) {
     const nextWorkflow = cloneWorkflow(workflow)
     const stage = this.getStage(nextWorkflow, stageId)
     if (!stage) return { workflow: nextWorkflow, error: 'Giai đoạn không tồn tại.' }
