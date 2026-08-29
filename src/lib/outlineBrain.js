@@ -3,22 +3,22 @@ function cleanText(value) {
 }
 
 function findTopicHint(text) {
-  const match = text.match(/(?:về|on|about|the topic of|topic is)\s+([^\.\n]+)/i)
+  const match = text.match(/(?:về|on|about|the topic of|topic is)\s+([^.\n]+)/i)
   return match ? match[1].trim() : ''
 }
 
 function firstSentence(text) {
-  const sentence = text.split(/[\n\.\?\!]+/).find(s => s.trim().length > 20)
+  const sentence = text.split(/[\n.?!]+/).find(s => s.trim().length > 20)
   return sentence ? sentence.trim() : ''
 }
 
 function collectHighlights(text) {
   const highlights = []
-  const lower = text.toLowerCase()
+  
   if (/[0-9]{4}/.test(text)) {
     highlights.push('Các con số và mốc thời gian quan trọng')
   }
-  if (/(\d+[\.,]?\d*\s*(%|percent|phần trăm))/i.test(text)) {
+  if (/(\d+[.,]?\d*\s*(%|percent|phần trăm))/i.test(text)) {
     highlights.push('Số liệu thống kê cụ thể')
   }
   if (/government|chính phủ|policy|chính sách|minister|ministerial/i.test(text)) {
@@ -63,11 +63,10 @@ function inferMustInclude(text) {
   ]
 
   if (highlights.length) {
-    return bullets.map((bullet) => {
-      const matched = highlights.find(h => bullet.toLowerCase().includes(h.split(' ')[0].toLowerCase()))
-      return `- ${bullet}`
-    }).join('\n')
-  }
+  return bullets
+    .map(bullet => `- ${bullet}`)
+    .join('\n')
+}
 
   return bullets.map(b => `- ${b}`).join('\n')
 }

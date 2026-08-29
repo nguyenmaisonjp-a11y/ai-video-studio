@@ -29,8 +29,9 @@ export function parseImagePromptResult(raw) {
     parsed = JSON.parse(jsonText)
   } catch (error) {
     throw new Error(
-      `Image Prompt Parser: JSON không hợp lệ. ${error.message}`
-    )
+  `Image Prompt Parser: JSON không hợp lệ. ${error.message}`,
+  { cause: error }
+)
   }
 
   if (!parsed || typeof parsed !== 'object') {
