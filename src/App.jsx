@@ -4,6 +4,7 @@ import { generateOutlineBrief } from './lib/outlineBrain.js'
 import ImagePromptController from './controllers/ImagePromptController.jsx'
 import GeminiFlowController from './controllers/GeminiFlowController.jsx'
 import ImageLibraryController from './controllers/ImageLibraryController.jsx'
+import CapCutPackageController from './controllers/CapCutPackageController.jsx'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { normalizeScenes } from './lib/videoProjectSchema.js'
 import { validateStoryboardScenes } from './lib/storyboardValidator.js'
@@ -1279,6 +1280,8 @@ export default function App() {
   setViewMode('geminiFlow')
 } else if (storedStage === 'imageLibrary') {
   setViewMode('imageLibrary')
+} else if (storedStage === 'capcutPackage') {
+  setViewMode('capcutPackage')
 } else {
   setViewMode('dashboard')
 }
@@ -1983,6 +1986,37 @@ function handleOpenImageLibrary() {
 
   setMessage('')
 }
+function handleOpenCapCutPackage() {
+  if (!activeProject) return
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      activeProject.workflow,
+      'capcutPackage',
+      activeProject
+    )
+
+  if (error) {
+    setMessage(error)
+    return
+  }
+
+  const nextProject = {
+    ...activeProject,
+    workflow: nextWorkflow
+  }
+
+  replaceProjectInState(nextProject)
+
+  setViewProjectId(activeProject.id)
+  setViewMode('capcutPackage')
+  setCurrentStage('capcutPackage')
+
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+
+  setMessage('')
+}
   function handleOpenProjectCard() {
   if (!activeProject) {
     setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
@@ -1998,7 +2032,8 @@ function handleOpenImageLibrary() {
     'storyboard',
     'imagePrompt',
     'geminiFlow',
-    'imageLibrary'
+    'imageLibrary',
+    'capcutPackage'
   ]
 
   setViewMode(
@@ -2104,7 +2139,9 @@ function handleOpenImageLibrary() {
                 : stage.id === 'geminiFlow'
   ? handleOpenGeminiFlow
   : stage.id === 'imageLibrary'
-    ? handleOpenImageLibrary
+  ? handleOpenImageLibrary
+  : stage.id === 'capcutPackage'
+    ? handleOpenCapCutPackage
     : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
@@ -2263,6 +2300,27 @@ function handleOpenImageLibrary() {
     onBackToGeminiFlow={() => {
       setViewMode('geminiFlow')
       setCurrentStage('geminiFlow')
+    }}
+
+    onBackToDashboard={handleOpenDashboard}
+  />
+)}
+{activeProject && viewMode === 'capcutPackage' && (
+  <CapCutPackageController
+    project={activeProject}
+
+    onProjectChange={(nextProject) => {
+      replaceProjectInState(nextProject)
+      saveProject(nextProject)
+
+      if (Array.isArray(nextProject.workflow)) {
+        saveWorkflow(nextProject.workflow)
+      }
+    }}
+
+    onBackToImageLibrary={() => {
+      setViewMode('imageLibrary')
+      setCurrentStage('imageLibrary')
     }}
 
     onBackToDashboard={handleOpenDashboard}
