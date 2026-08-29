@@ -5,6 +5,7 @@ import ImagePromptController from './controllers/ImagePromptController.jsx'
 import GeminiFlowController from './controllers/GeminiFlowController.jsx'
 import ImageLibraryController from './controllers/ImageLibraryController.jsx'
 import CapCutPackageController from './controllers/CapCutPackageController.jsx'
+import PublishController from './controllers/PublishController.jsx'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { normalizeScenes } from './lib/videoProjectSchema.js'
 import { validateStoryboardScenes } from './lib/storyboardValidator.js'
@@ -1282,6 +1283,8 @@ export default function App() {
   setViewMode('imageLibrary')
 } else if (storedStage === 'capcutPackage') {
   setViewMode('capcutPackage')
+} else if (storedStage === 'publish') {
+  setViewMode('publish')
 } else {
   setViewMode('dashboard')
 }
@@ -2017,6 +2020,37 @@ function handleOpenCapCutPackage() {
 
   setMessage('')
 }
+function handleOpenPublish() {
+  if (!activeProject) return
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      activeProject.workflow,
+      'publish',
+      activeProject
+    )
+
+  if (error) {
+    setMessage(error)
+    return
+  }
+
+  const nextProject = {
+    ...activeProject,
+    workflow: nextWorkflow
+  }
+
+  replaceProjectInState(nextProject)
+
+  setViewProjectId(activeProject.id)
+  setViewMode('publish')
+  setCurrentStage('publish')
+
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+
+  setMessage('')
+}
   function handleOpenProjectCard() {
   if (!activeProject) {
     setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
@@ -2033,7 +2067,8 @@ function handleOpenCapCutPackage() {
     'imagePrompt',
     'geminiFlow',
     'imageLibrary',
-    'capcutPackage'
+    'capcutPackage',
+    'publish'
   ]
 
   setViewMode(
@@ -2141,7 +2176,9 @@ function handleOpenCapCutPackage() {
   : stage.id === 'imageLibrary'
   ? handleOpenImageLibrary
   : stage.id === 'capcutPackage'
-    ? handleOpenCapCutPackage
+  ? handleOpenCapCutPackage
+  : stage.id === 'publish'
+    ? handleOpenPublish
     : undefined
                     const disabled = stage.id === 'outline' && !outlineUnlocked
                     const label = stage.label || stage.name || `Stage ${i + 1}`
@@ -2321,6 +2358,27 @@ function handleOpenCapCutPackage() {
     onBackToImageLibrary={() => {
       setViewMode('imageLibrary')
       setCurrentStage('imageLibrary')
+    }}
+
+    onBackToDashboard={handleOpenDashboard}
+  />
+)}
+{activeProject && viewMode === 'publish' && (
+  <PublishController
+    project={activeProject}
+
+    onProjectChange={(nextProject) => {
+      replaceProjectInState(nextProject)
+      saveProject(nextProject)
+
+      if (Array.isArray(nextProject.workflow)) {
+        saveWorkflow(nextProject.workflow)
+      }
+    }}
+
+    onBackToCapCutPackage={() => {
+      setViewMode('capcutPackage')
+      setCurrentStage('capcutPackage')
     }}
 
     onBackToDashboard={handleOpenDashboard}
