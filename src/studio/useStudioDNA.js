@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
-import { getStudioDNA, setStudioDNA, applyPreset, PRESETS } from './studioDNA.js'
+import { useState } from 'react'
+import {
+  getStudioDNA,
+  setStudioDNA,
+  applyPreset,
+  PRESETS
+} from './studioDNA.js'
 
 export function useStudioDNA() {
-  const [dna, setDnaState] = useState(() => getStudioDNA())
-
-  useEffect(() => {
-    // sync from storage on mount
-    setDnaState(getStudioDNA())
-  }, [])
+  const [dna, setDnaState] =
+    useState(() => getStudioDNA())
 
   function update(updates) {
     const next = setStudioDNA(updates)
@@ -15,7 +16,7 @@ export function useStudioDNA() {
     return next
   }
 
-  function usePreset(name) {
+  function selectPreset(name) {
     const next = applyPreset(name)
     setDnaState(next)
     return next
@@ -24,7 +25,7 @@ export function useStudioDNA() {
   return {
     dna,
     update,
-    usePreset,
+    selectPreset,
     presets: PRESETS
   }
 }
