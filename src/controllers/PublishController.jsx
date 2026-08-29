@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState
-} from 'react'
+import { useState } from 'react'
 
 import PublishView from '../views/PublishView.jsx'
 import { PublishService } from '../services/publishService.js'
@@ -29,16 +26,6 @@ export default function PublishController({
   const [statusMessage, setStatusMessage] =
     useState('')
 
-  useEffect(() => {
-    setDraft(
-      PublishService.createDraft(
-        project || {}
-      )
-    )
-
-    setError('')
-    setStatusMessage('')
-  }, [project?.id])
 
   function requireProjectChange() {
     if (

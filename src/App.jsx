@@ -2371,7 +2371,8 @@ function handleOpenPublish() {
 )}
 {activeProject && viewMode === 'publish' && (
   <PublishController
-    project={activeProject}
+  key={activeProject.id}
+  project={activeProject}
 
     onProjectChange={(nextProject) => {
       replaceProjectInState(nextProject)
