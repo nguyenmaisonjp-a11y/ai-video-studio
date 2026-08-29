@@ -275,11 +275,7 @@ function Wizard({ open, onClose, onCreate }) {
   )
 }
 
-const languageMap = {
-  'Tiếng Nhật': 'Japanese',
-  'Tiếng Anh': 'English',
-  'Tiếng Việt': 'Vietnamese'
-}
+
 
 function ResearchView({ project, onUpdateResearch, onCompleteResearch }) {
   const [research, setResearch] = useState(project.research || { goal:'', keyQuestions:'', sources:'', prompt:'', result:'', resultSaved:false })
@@ -322,7 +318,9 @@ function ResearchView({ project, onUpdateResearch, onCompleteResearch }) {
 
   function copyPrompt() {
     if (!research.prompt) return
-    try { navigator.clipboard.writeText(research.prompt) } catch (e) { }
+    try { navigator.clipboard.writeText(research.prompt) } catch {
+  // Clipboard có thể bị trình duyệt từ chối.
+}
   }
 
   function saveResult() {
@@ -467,7 +465,9 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
 
   function copyPrompt() {
     if (!outline.prompt) return
-    try { navigator.clipboard.writeText(outline.prompt) } catch (e) { }
+    try { navigator.clipboard.writeText(outline.prompt) } catch {
+  // Clipboard có thể bị trình duyệt từ chối.
+}
   }
 
   function saveOutlineResult() {
@@ -641,7 +641,9 @@ function ScriptView({ project, onUpdateScriptBrief, onGenerateScriptPrompt, onUp
 
   function copyPrompt() {
     if (!generatedPrompt) return
-    try { navigator.clipboard.writeText(generatedPrompt) } catch (e) { }
+    try { navigator.clipboard.writeText(generatedPrompt) } catch {
+  // Clipboard có thể bị trình duyệt từ chối.
+}
   }
 
   return (
@@ -805,7 +807,9 @@ function HumanizeView({ project, studioDNA, onUpdateHumanizedScript, onUpdateHum
 
   function copyPrompt() {
     if (!generatedPrompt) return
-    try { navigator.clipboard.writeText(generatedPrompt) } catch (e) {}
+    try { navigator.clipboard.writeText(generatedPrompt) } catch {
+  // Clipboard có thể bị trình duyệt từ chối.
+}
   }
 
   function openGemini() {
@@ -917,7 +921,7 @@ function HumanizeView({ project, studioDNA, onUpdateHumanizedScript, onUpdateHum
   )
 }
 
-function VoiceScriptView({ project, studioDNA, onUpdateVoiceBrief, onSaveGeneratedVoiceScriptPrompt, onGenerateVoiceScriptPrompt, onUpdateVoiceScriptResult, onSaveVoiceScript, onCompleteVoiceScript, onBackToHumanize, onBackToDashboard }) {
+function VoiceScriptView({ project, studioDNA, onUpdateVoiceBrief, onSaveGeneratedVoiceScriptPrompt, onUpdateVoiceScriptResult, onSaveVoiceScript, onCompleteVoiceScript, onBackToHumanize, onBackToDashboard }) {
   const [prompt, setPrompt] = useState(project.generatedVoiceScriptPrompt || '')
   const [result, setResult] = useState(project.voiceScriptResult || '')
   const [saved, setSaved] = useState(project.voiceScriptSaved || false)
@@ -975,7 +979,9 @@ function VoiceScriptView({ project, studioDNA, onUpdateVoiceBrief, onSaveGenerat
 
   function copyPrompt() {
     if (!prompt) return
-    try { navigator.clipboard.writeText(prompt) } catch (e) {}
+    try { navigator.clipboard.writeText(prompt) } catch {
+  // Clipboard có thể bị trình duyệt từ chối.
+}
   }
 
   function openGemini() { window.open('https://gemini.google.com/app', '_blank') }
@@ -1113,7 +1119,7 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
 
     setSaved(false)
     setError('')
-  } catch (err) {
+  } catch {
     setError('Storyboard scenes phải là JSON hợp lệ.')
   }
 }
@@ -1143,7 +1149,7 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
 
     setSaved(true)
     setError('')
-  } catch (err) {
+  } catch {
     setError('Storyboard scenes phải là JSON hợp lệ.')
   }
 }
@@ -1216,7 +1222,7 @@ export default function App() {
   const studioDNA = useStudioDNA()
 
   function openWizard() { setWizardOpen(true) }
-  function closeWizard() { setWizardOpen(false) }
+  
   
   function replaceProjectInState(nextProject) {
   setProjects(prev =>

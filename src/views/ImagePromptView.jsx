@@ -114,7 +114,7 @@ useEffect(() => {
       await navigator.clipboard.writeText(generatedPrompt)
       setCopyStatus('Đã sao chép Image Prompt.')
       setError('')
-    } catch (err) {
+    } catch {
       setCopyStatus('')
       setError('Không thể sao chép Image Prompt.')
     }
