@@ -79,7 +79,11 @@ export function getStudioDNA() {
 
 export function setStudioDNA(updates) {
   studioDNA = { ...studioDNA, ...updates }
-  try { saveStudioDNA(studioDNA) } catch (e) {}
+  try {
+  saveStudioDNA(studioDNA)
+} catch {
+  // Bỏ qua lỗi localStorage.
+}
   // return fresh copy
   return getStudioDNA()
 }
@@ -88,7 +92,11 @@ export function applyPreset(name) {
   const preset = PRESETS[name]
   if (!preset) return getStudioDNA()
   studioDNA = { ...DEFAULT_STUDIO_DNA, ...preset }
-  try { saveStudioDNA(studioDNA) } catch (e) {}
+  try {
+  saveStudioDNA(studioDNA)
+} catch {
+  // Bỏ qua lỗi localStorage.
+}
   return getStudioDNA()
 }
 

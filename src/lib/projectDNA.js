@@ -5,12 +5,12 @@ function safeParse(value) {
   if (typeof value !== 'string') return null
   try {
     return JSON.parse(value)
-  } catch (error) {
+  } catch {
     return null
   }
 }
 
-export function createProjectDNA(project) {
+export function createProjectDNA() {
   const defaultDNA = {
     channelName: '日本の異変',
     targetMarket: 'Japan',
@@ -53,7 +53,7 @@ export function saveProjectDNA() {
   if (!currentDNA) return
   try {
     window.localStorage.setItem(DNA_KEY, JSON.stringify(currentDNA))
-  } catch (error) {
+  } catch {
     // ignore persistence errors in browser
   }
 }
