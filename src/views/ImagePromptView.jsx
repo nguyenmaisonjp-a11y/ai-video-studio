@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ImagePromptService } from '../services/imagePromptService.js'
-
+const EMPTY_SCENES = []
 export default function ImagePromptView({
   project,
   onSaveImagePrompt,
@@ -8,8 +8,8 @@ export default function ImagePromptView({
   onBackToDashboard
 }) {
   const scenes = Array.isArray(project?.storyboardScenes)
-    ? project.storyboardScenes
-    : []
+  ? project.storyboardScenes
+  : EMPTY_SCENES
 
   const [generatedPrompt, setGeneratedPrompt] = useState(
   project?.generatedImagePrompt || ''
@@ -38,41 +38,6 @@ const [saveStatus, setSaveStatus] = useState(
     : ''
 )
 
-useEffect(() => {
-  setGeneratedPrompt(
-    project?.generatedImagePrompt || ''
-  )
-
-  setRawResult(
-    project?.rawImagePromptResult || ''
-  )
-
-  setParsedResult(
-    project?.parsedImagePromptResult || null
-  )
-
-  if (project?.parsedImagePromptResult?.scenes) {
-    setParseStatus(
-      `JSON đã lưu. Có ${project.parsedImagePromptResult.scenes.length} scene.`
-    )
-  } else {
-    setParseStatus('')
-  }
-
-  setSaveStatus(
-    project?.imagePromptSaved
-      ? 'Image Prompt đã được lưu.'
-      : ''
-  )
-
-  setError('')
-}, [
-  project?.id,
-  project?.generatedImagePrompt,
-  project?.rawImagePromptResult,
-  project?.parsedImagePromptResult,
-  project?.imagePromptSaved
-])
 
   const summary = useMemo(() => {
     const totalScenes = scenes.length
