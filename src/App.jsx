@@ -401,31 +401,6 @@ function OutlineView({ project, onUpdateOutline, onBackToResearch }) {
   const [outlineResultText, setOutlineResultText] = useState(project.outlineResult || '')
   const [outlineSavedState, setOutlineSavedState] = useState(project.outlineSaved || false)
 
-  useEffect(() => {
-    setOutline(project.outline || { objective:'', coreArgument:'', mustInclude:'', avoid:'', prompt:'' })
-    setError('')
-    setOutlineResultText(project.outlineResult || '')
-    setOutlineSavedState(project.outlineSaved || false)
-  }, [project.outline])
-
-  useEffect(() => {
-    const researchText = project.research?.result || ''
-    if (!researchText.trim()) return
-
-    const brief = generateOutlineBrief(researchText)
-    const next = {
-      ...outline,
-      objective: brief.videoObjective,
-      coreArgument: brief.coreArgument,
-      mustInclude: brief.mustInclude,
-      avoid: brief.avoid
-    }
-
-    setOutline(next)
-    onUpdateOutline(next)
-    saveProjectDNA()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.research?.result])
 
   function updateOutlineField(field, value) {
     const next = { ...outline, [field]: value }
@@ -1012,20 +987,49 @@ function VoiceScriptView({ project, studioDNA, onUpdateVoiceBrief, onSaveGenerat
   )
 }
 
-function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryboardResult, onUpdateStoryboardScenes, onSaveStoryboard, onBackToHumanize, onBackToDashboard }) {
-  const [prompt, setPrompt] = useState(project.generatedStoryboardPrompt || '')
-  const [rawStoryboard, setRawStoryboard] = useState(project.rawStoryboardResult || '')
-  const [scenesText, setScenesText] = useState(JSON.stringify(project.storyboardScenes || [], null, 2))
-  const [saved, setSaved] = useState(project.storyboardSaved || false)
+function StoryboardView({
+  project,
+  onGenerateStoryboardPrompt,
+  onUpdateRawStoryboardResult,
+  onUpdateStoryboardScenes,
+  onSaveStoryboard,
+  onBackToHumanize,
+  onBackToDashboard
+}) {
+  const [prompt, setPrompt] = useState(
+    project.generatedStoryboardPrompt || ''
+  )
+
+  const [rawStoryboard, setRawStoryboard] = useState(
+    project.rawStoryboardResult || ''
+  )
+
+  const [scenesText, setScenesText] = useState(
+    JSON.stringify(project.storyboardScenes || [], null, 2)
+  )
+
+  const [saved, setSaved] = useState(
+    project.storyboardSaved || false
+  )
+
   const [error, setError] = useState('')
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Restore persisted Storyboard state when the active project changes. */
   useEffect(() => {
     setPrompt(project.generatedStoryboardPrompt || '')
     setRawStoryboard(project.rawStoryboardResult || '')
-    setScenesText(JSON.stringify(project.storyboardScenes || [], null, 2))
+    setScenesText(
+      JSON.stringify(project.storyboardScenes || [], null, 2)
+    )
     setSaved(project.storyboardSaved || false)
     setError('')
-  }, [project.generatedStoryboardPrompt, project.rawStoryboardResult, project.storyboardScenes, project.storyboardSaved])
+  }, [
+    project.generatedStoryboardPrompt,
+    project.rawStoryboardResult,
+    project.storyboardScenes,
+    project.storyboardSaved
+  ])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function generatePrompt() {
     try {
@@ -1158,7 +1162,7 @@ function StoryboardView({ project, onGenerateStoryboardPrompt, onUpdateRawStoryb
         </div>
 
         <div className="result-footer">
-          <div className="char-count">{rawStoryboard.length} ký tự</div>
+          <div className="char-count">{scenesText.length} ký tự</div>
           {saved && <div className="saved-status">Storyboard đã được lưu</div>}
         </div>
         {error && <div className="error-message">{error}</div>}
@@ -1218,7 +1222,7 @@ export default function App() {
       storedDNA ||
       createProjectDNA(normalizedProject)
   }
-
+/* eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate the application from persisted project data on startup.*/
   setProjects([projectWithDNA])
   setViewProjectId(projectWithDNA.id)
 
@@ -1254,6 +1258,7 @@ export default function App() {
   setViewMode('dashboard')
 }
 }, [])
+/* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!viewProjectId) return
@@ -1705,25 +1710,63 @@ export default function App() {
 }
 
   function completeResearch(id) {
-    const project = projects.find(p => p.id === id)
-    if (!project) return
-    const { workflow: completedWorkflow, error: completeError } = WorkflowEngine.completeStage(project.workflow, 'research')
-    if (completeError) {
-      setMessage(completeError)
-      return
-    }
-    const { workflow: nextWorkflow, error: enterError } = WorkflowEngine.enterStage(completedWorkflow, 'outline', project)
-    if (enterError) {
-      setMessage(enterError)
-      return
-    }
-    const nextProject = { ...project, workflow: nextWorkflow }
-    replaceProjectInState(nextProject)
-    saveProject(nextProject)
-    saveWorkflow(nextWorkflow)
-    setViewMode('outline')
-    setCurrentStage('outline')
+  const project = projects.find(p => p.id === id)
+  if (!project) return
+
+  const completedWorkflow =
+    WorkflowEngine.completeStage(project.workflow, 'research')
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      completedWorkflow,
+      'outline',
+      project
+    )
+
+  if (error) {
+    setMessage(error)
+    return
   }
+
+  const researchText = project.research?.result || ''
+  const generatedBrief = generateOutlineBrief(researchText)
+  const existingOutline = project.outline || {}
+
+  const outline = {
+    objective:
+      existingOutline.objective ||
+      generatedBrief.videoObjective ||
+      '',
+    coreArgument:
+      existingOutline.coreArgument ||
+      generatedBrief.coreArgument ||
+      '',
+    mustInclude:
+      existingOutline.mustInclude ||
+      generatedBrief.mustInclude ||
+      '',
+    avoid:
+      existingOutline.avoid ||
+      generatedBrief.avoid ||
+      '',
+    prompt: existingOutline.prompt || ''
+  }
+
+  const nextProject = {
+    ...project,
+    outline,
+    workflow: nextWorkflow
+  }
+
+  replaceProjectInState(nextProject)
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+
+  setViewProjectId(project.id)
+  setViewMode('outline')
+  setCurrentStage('outline')
+  setMessage('')
+}
 
   const activeProject = projects.find(p => p.id === viewProjectId)
   const outlineUnlocked = activeProject?.research?.resultSaved && activeProject?.research?.result?.trim().length >= 500
