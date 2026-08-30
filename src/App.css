@@ -269,3 +269,74 @@
 @media (max-width: 860px) {
   .script-brief-grid.two-column { grid-template-columns: repeat(1, minmax(0, 1fr)); }
 }
+
+/* Storyboard layout */
+.storyboard-view {
+  width: 100%;
+  min-width: 0;
+}
+
+.storyboard-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.storyboard-panel .brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.storyboard-prompt-section,
+.storyboard-raw-section,
+.storyboard-scenes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.storyboard-prompt-section label,
+.storyboard-raw-section label,
+.storyboard-scenes-section label {
+  display: block;
+  width: 100%;
+  font-weight: 600;
+}
+
+.storyboard-panel textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  padding: 14px 16px;
+  border: 1px solid #292932;
+  border-radius: 12px;
+  background: #111216;
+  color: #f4f4f5;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.storyboard-panel .storyboard-prompt {
+  min-height: 220px;
+}
+
+.storyboard-panel .storyboard-result {
+  min-height: 240px;
+}
+
+.storyboard-panel .storyboard-scenes {
+  min-height: 280px;
+}
+
+.storyboard-panel .result-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
