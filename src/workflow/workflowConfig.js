@@ -162,12 +162,12 @@ export const WORKFLOW_STAGES = [
     requiredInputs: ['imageLibrary.completed'],
     producedOutputs: ['capcutPackage.completed'],
     previousStage: 'imageLibrary',
-    nextStage: 'publish'
+    nextStage: 'qualityReview'
   },
   {
-    id: 'publish',
+    id: 'qualityReview',
     number: 12,
-    label: 'Publish',
+    label: 'Quality Review',
     statusLabel: {
       locked: 'Chưa mở khóa',
       available: 'Sẵn sàng',
@@ -175,8 +175,23 @@ export const WORKFLOW_STAGES = [
       completed: 'Hoàn thành'
     },
     requiredInputs: ['capcutPackage.completed'],
-    producedOutputs: ['publish.completed'],
+    producedOutputs: ['qualityReview.completed'],
     previousStage: 'capcutPackage',
+    nextStage: 'publish'
+  },
+  {
+    id: 'publish',
+    number: 13,
+    label: 'Publish',
+    statusLabel: {
+      locked: 'Chưa mở khóa',
+      available: 'Sẵn sàng',
+      active: 'Đang thực hiện',
+      completed: 'Hoàn thành'
+    },
+    requiredInputs: ['qualityReview.completed'],
+    producedOutputs: ['publish.completed'],
+    previousStage: 'qualityReview',
     nextStage: null
   }
 ]

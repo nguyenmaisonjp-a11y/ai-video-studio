@@ -16,6 +16,7 @@ const EXPECTED_STAGE_IDS = [
   'geminiFlow',
   'imageLibrary',
   'capcutPackage',
+  'qualityReview',
   'publish'
 ]
 

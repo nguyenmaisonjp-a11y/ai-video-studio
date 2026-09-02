@@ -5,6 +5,7 @@ import ImagePromptController from './controllers/ImagePromptController.jsx'
 import GeminiFlowController from './controllers/GeminiFlowController.jsx'
 import ImageLibraryController from './controllers/ImageLibraryController.jsx'
 import CapCutPackageController from './controllers/CapCutPackageController.jsx'
+import QualityReviewController from './controllers/QualityReviewController.jsx'
 import PublishController from './controllers/PublishController.jsx'
 import { createProjectDNA, loadProjectDNA, saveProjectDNA } from './lib/projectDNA.js'
 import { normalizeScenes } from './lib/videoProjectSchema.js'
@@ -13,6 +14,7 @@ import { saveProject, loadProject, clearProject, saveCurrentStage, loadCurrentSt
 import { WorkflowEngine } from './workflow/workflowEngine.js'
 import { loadWorkflow, saveWorkflow, clearWorkflow } from './workflow/workflowStorage.js'
 import { WORKFLOW_STAGES } from './workflow/workflowConfig.js'
+import { createQualityProfile, normalizeQualityProfile } from './quality/qualityProfile.js'
 import StudioSettings from './studio/StudioSettings.jsx'
 import { useStudioDNA } from './studio/useStudioDNA.js'
 import './App.css'
@@ -1217,6 +1219,10 @@ export default function App() {
   const projectWithDNA = {
     ...normalizedProject,
     workflow,
+    qualityProfile: normalizeQualityProfile(
+      normalizedProject.qualityProfile,
+      normalizedProject
+    ),
     dna:
       normalizedProject.dna ||
       storedDNA ||
@@ -1252,6 +1258,8 @@ export default function App() {
   setViewMode('imageLibrary')
 } else if (storedStage === 'capcutPackage') {
   setViewMode('capcutPackage')
+} else if (storedStage === 'qualityReview') {
+  setViewMode('qualityReview')
 } else if (storedStage === 'publish') {
   setViewMode('publish')
 } else {
@@ -1281,6 +1289,7 @@ export default function App() {
       ...p,
       dna,
       workflow,
+      qualityProfile: createQualityProfile({ ...p, dna }),
       humanizeObjective: '',
       naturalnessLevel: '',
       narrationRhythm: '',
@@ -2059,6 +2068,30 @@ function handleOpenPublish() {
 
   setMessage('')
 }
+function handleOpenQualityReview() {
+  if (!activeProject) return
+
+  const { workflow: nextWorkflow, error } =
+    WorkflowEngine.enterStage(
+      activeProject.workflow,
+      'qualityReview',
+      activeProject
+    )
+
+  if (error) {
+    setMessage(error)
+    return
+  }
+
+  const nextProject = { ...activeProject, workflow: nextWorkflow }
+  replaceProjectInState(nextProject)
+  setViewProjectId(activeProject.id)
+  setViewMode('qualityReview')
+  setCurrentStage('qualityReview')
+  saveProject(nextProject)
+  saveWorkflow(nextWorkflow)
+  setMessage('')
+}
   function handleOpenProjectCard() {
   if (!activeProject) {
     setMessage('Tạo dự án mới để bắt đầu dự án thực tế.')
@@ -2076,6 +2109,7 @@ function handleOpenPublish() {
     'geminiFlow',
     'imageLibrary',
     'capcutPackage',
+    'qualityReview',
     'publish'
   ]
 
@@ -2185,6 +2219,8 @@ function handleOpenPublish() {
   ? handleOpenImageLibrary
   : stage.id === 'capcutPackage'
   ? handleOpenCapCutPackage
+  : stage.id === 'qualityReview'
+  ? handleOpenQualityReview
   : stage.id === 'publish'
     ? handleOpenPublish
     : undefined
@@ -2371,6 +2407,25 @@ function handleOpenPublish() {
     onBackToDashboard={handleOpenDashboard}
   />
 )}
+{activeProject && viewMode === 'qualityReview' && (
+  <QualityReviewController
+    key={activeProject.id}
+    project={activeProject}
+    onProjectChange={(nextProject) => {
+      replaceProjectInState(nextProject)
+      saveProject(nextProject)
+
+      if (Array.isArray(nextProject.workflow)) {
+        saveWorkflow(nextProject.workflow)
+      }
+    }}
+    onBackToQualityReview={() => {
+      setViewMode('capcutPackage')
+      setCurrentStage('capcutPackage')
+    }}
+    onBackToDashboard={handleOpenDashboard}
+  />
+)}
 {activeProject && viewMode === 'publish' && (
   <PublishController
   key={activeProject.id}
@@ -2386,8 +2441,8 @@ function handleOpenPublish() {
     }}
 
     onBackToCapCutPackage={() => {
-      setViewMode('capcutPackage')
-      setCurrentStage('capcutPackage')
+      setViewMode('qualityReview')
+      setCurrentStage('qualityReview')
     }}
 
     onBackToDashboard={handleOpenDashboard}

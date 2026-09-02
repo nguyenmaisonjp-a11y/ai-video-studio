@@ -9,7 +9,7 @@ export default function PublishView({
   onSaveDraft,
   onDownloadMetadata,
   onCompletePublish,
-  onBackToCapCutPackage,
+  onBackToQualityReview,
   onBackToDashboard
 }) {
   if (!draft) {
@@ -257,9 +257,9 @@ export default function PublishView({
         <button
           type="button"
           className="btn ghost"
-          onClick={onBackToCapCutPackage}
+          onClick={onBackToQualityReview}
         >
-          Quay lại CapCut Package
+          Quay lại Quality Review
         </button>
 
         <button

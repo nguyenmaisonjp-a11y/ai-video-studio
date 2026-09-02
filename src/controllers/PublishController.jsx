@@ -7,7 +7,7 @@ import { WorkflowEngine } from '../workflow/workflowEngine.js'
 export default function PublishController({
   project,
   onProjectChange,
-  onBackToCapCutPackage,
+  onBackToQualityReview,
   onBackToDashboard
 }) {
   const [draft, setDraft] =
@@ -273,8 +273,8 @@ export default function PublishController({
       onCompletePublish={
         handleCompletePublish
       }
-      onBackToCapCutPackage={
-        onBackToCapCutPackage
+      onBackToQualityReview={
+        onBackToQualityReview
       }
       onBackToDashboard={
         onBackToDashboard
