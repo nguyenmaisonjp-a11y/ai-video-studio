@@ -75,21 +75,6 @@ export const WORKFLOW_STAGES = [
     nextStage: 'voiceScript'
   },
   {
-    id: 'storyboard',
-    number: 7,
-    label: 'Storyboard',
-    statusLabel: {
-      locked: 'Chưa mở khóa',
-      available: 'Sẵn sàng',
-      active: 'Đang thực hiện',
-      completed: 'Hoàn thành'
-    },
-    requiredInputs: ['voiceScript.completed'],
-    producedOutputs: ['storyboard.completed'],
-    previousStage: 'voiceScript',
-    nextStage: 'imagePrompt'
-  },
-  {
     id: 'voiceScript',
     number: 6,
     label: 'Voice Script',
@@ -103,6 +88,21 @@ export const WORKFLOW_STAGES = [
     producedOutputs: ['voiceScript.completed'],
     previousStage: 'humanize',
     nextStage: 'storyboard'
+  },
+  {
+    id: 'storyboard',
+    number: 7,
+    label: 'Storyboard',
+    statusLabel: {
+      locked: 'Chưa mở khóa',
+      available: 'Sẵn sàng',
+      active: 'Đang thực hiện',
+      completed: 'Hoàn thành'
+    },
+    requiredInputs: ['voiceScript.completed'],
+    producedOutputs: ['storyboard.completed'],
+    previousStage: 'voiceScript',
+    nextStage: 'imagePrompt'
   },
   {
   id: 'imagePrompt',
