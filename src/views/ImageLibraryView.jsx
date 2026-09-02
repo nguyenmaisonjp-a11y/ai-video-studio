@@ -24,159 +24,162 @@ export default function ImageLibraryView({
       : 0
 
   return (
-    <section className="stage-view">
-      <div className="stage-header">
-        <h1>{project?.topic || 'Image Library'}</h1>
+    <section className="image-library-view">
+      <div className="project-info image-library-header">
+        <h2>{project?.topic || 'Image Library'}</h2>
 
-        <p>Image Library · Static Image V1</p>
+        <div className="meta">
+          Image Library · Static Image V1
+        </div>
 
-        <p>
+        <div className="meta">
           {project?.market || '—'} ·{' '}
           {project?.language || '—'} ·{' '}
           {project?.duration || '—'}
-        </p>
+        </div>
       </div>
 
-      <h2>Image Import Progress</h2>
+      <section className="image-library-panel image-library-summary">
+        <div className="image-library-summary-heading">
+          <div>
+            <h3>Image Import Progress</h3>
 
-      <p>
-        Đã nhập {importedCount}/{totalScenes} ảnh ·{' '}
-        {percent}%
-      </p>
+            <div className="meta">
+              Đã nhập {importedCount}/{totalScenes} ảnh
+            </div>
+          </div>
 
-      <div className="progress">
-        <div
-          className="progress-fill"
-          style={{
-            width: `${percent}%`
-          }}
-        />
+          <strong className="image-library-percent">
+            {percent}%
+          </strong>
+        </div>
+
+        <div className="progress">
+          <div
+            className="progress-fill"
+            style={{
+              width: `${percent}%`
+            }}
+          />
+        </div>
+      </section>
+
+      <div className="image-library-messages">
+        {loading && (
+          <div className="meta">Đang đọc kho ảnh...</div>
+        )}
+
+        {error && (
+          <pre className="error-message">
+            {error}
+          </pre>
+        )}
+
+        {statusMessage && (
+          <div className="saved-status">
+            {statusMessage}
+          </div>
+        )}
       </div>
 
-      {loading && (
-        <p>Đang đọc kho ảnh...</p>
-      )}
+      <section className="image-library-panel image-library-scenes">
+        <h3>Scenes</h3>
 
-      {error && (
-        <pre className="error-message">
-          {error}
-        </pre>
-      )}
+        {scenes.length === 0 && (
+          <div className="error-message">
+            Project chưa có scene để nhập ảnh.
+          </div>
+        )}
 
-      {statusMessage && (
-        <p className="success-message">
-          {statusMessage}
-        </p>
-      )}
+        {scenes.map(scene => {
+          const asset =
+            assetsByScene[scene.sceneId]
 
-      <h2>Scenes</h2>
+          const image =
+            scene.generations?.image || {}
 
-      {scenes.length === 0 && (
-        <p>
-          Project chưa có scene để nhập ảnh.
-        </p>
-      )}
+          return (
+            <article
+              key={scene.sceneId}
+              className={`image-library-scene-card${
+                asset ? ' is-imported' : ''
+              }`}
+            >
+              <div className="image-library-scene-heading">
+                <h4>Scene {scene.sceneNumber}</h4>
 
-      {scenes.map(scene => {
-        const asset =
-          assetsByScene[scene.sceneId]
+                <span
+                  className={`image-library-status${
+                    asset ? ' is-imported' : ''
+                  }`}
+                >
+                  {asset ? 'Đã nhập ảnh' : 'Chưa nhập ảnh'}
+                </span>
+              </div>
 
-        const image =
-          scene.generations?.image || {}
+              <div className="field-group">
+                <label>Image Prompt</label>
 
-        return (
-          <article
-            key={scene.sceneId}
-            className="card"
-          >
-            <h3>
-              Scene {scene.sceneNumber}
-            </h3>
+                <div className="preview-box">
+                  {image.prompt ||
+                    scene.imagePrompt ||
+                    'Chưa có Image Prompt.'}
+                </div>
+              </div>
 
-            <p>
-              <strong>Image Prompt</strong>
-            </p>
+              <div className="image-library-file-meta">
+                <span>File đã xác nhận trong Gemini Flow</span>
+                <strong>{image.fileName || 'Chưa có tên file.'}</strong>
+              </div>
 
-            <p>
-              {image.prompt ||
-                scene.imagePrompt ||
-                'Chưa có Image Prompt.'}
-            </p>
+              {asset?.previewUrl ? (
+                <figure className="image-library-preview">
+                  <img
+                    src={asset.previewUrl}
+                    alt={`Scene ${scene.sceneNumber}`}
+                  />
 
-            <p>
-              <strong>
-                File đã xác nhận trong Gemini Flow
-              </strong>
-            </p>
+                  <figcaption>
+                    Ảnh trong thư viện: {asset.fileName}
+                  </figcaption>
+                </figure>
+              ) : (
+                <div className="image-library-empty-preview">
+                  Chưa nhập file ảnh thật vào thư viện.
+                </div>
+              )}
 
-            <p>
-              {image.fileName ||
-                'Chưa có tên file.'}
-            </p>
+              <label className="image-library-picker">
+                Chọn ảnh cho Scene {scene.sceneNumber}
 
-            {asset?.previewUrl ? (
-              <div>
-                <img
-                  src={asset.previewUrl}
-                  alt={`Scene ${scene.sceneNumber}`}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    maxWidth: '720px',
-                    maxHeight: '480px',
-                    objectFit: 'contain',
-                    marginTop: '12px',
-                    marginBottom: '12px',
-                    borderRadius: '8px'
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={loading}
+                  onChange={event => {
+                    const file =
+                      event.target.files?.[0]
+
+                    if (file) {
+                      onImportImage?.(
+                        scene.sceneId,
+                        file
+                      )
+                    }
+
+                    event.target.value = ''
                   }}
                 />
+              </label>
+            </article>
+          )
+        })}
+      </section>
 
-                <p>
-                  <strong>Ảnh trong thư viện:</strong>{' '}
-                  {asset.fileName}
-                </p>
-              </div>
-            ) : (
-              <p>
-                Chưa nhập file ảnh thật vào thư viện.
-              </p>
-            )}
-
-            <label>
-              <strong>
-                Chọn ảnh cho Scene {scene.sceneNumber}
-              </strong>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={event => {
-                  const file =
-                    event.target.files?.[0]
-
-                  if (file) {
-                    onImportImage?.(
-                      scene.sceneId,
-                      file
-                    )
-                  }
-
-                  event.target.value = ''
-                }}
-                style={{
-                  display: 'block',
-                  marginTop: '8px'
-                }}
-              />
-            </label>
-          </article>
-        )
-      })}
-
-      <div className="actions">
+      <div className="image-library-footer brief-actions">
         <button
           type="button"
-          className="primary"
+          className="btn primary"
           onClick={onCompleteImageLibrary}
           disabled={
             loading ||
@@ -189,6 +192,7 @@ export default function ImageLibraryView({
 
         <button
           type="button"
+          className="btn ghost"
           onClick={onBackToGeminiFlow}
         >
           Quay lại Gemini Flow
@@ -196,6 +200,7 @@ export default function ImageLibraryView({
 
         <button
           type="button"
+          className="btn ghost"
           onClick={onBackToDashboard}
         >
           Về Dashboard

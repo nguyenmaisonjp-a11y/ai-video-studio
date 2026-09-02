@@ -27,196 +27,215 @@ export default function CapCutPackageView({
     availableMediaCount ===
       scenes.length
 
+  const mediaPercent =
+    scenes.length > 0
+      ? Math.round(
+          (availableMediaCount / scenes.length) * 100
+        )
+      : 0
+
   return (
-    <section className="stage-view">
-      <div className="stage-header">
-        <h1>
+    <section className="capcut-package-view">
+      <div className="project-info capcut-package-header">
+        <h2>
           {project?.topic ||
             'CapCut Package'}
-        </h1>
+        </h2>
 
-        <p>
+        <div className="meta">
           CapCut Package · Static Image V1
-        </p>
+        </div>
 
-        <p>
+        <div className="meta">
           {project?.market || '—'} ·{' '}
           {project?.language || '—'} ·{' '}
           {project?.duration || '—'}
-        </p>
+        </div>
       </div>
 
-      <h2>Package Summary</h2>
+      <section className="capcut-package-panel capcut-package-summary">
+        <div className="capcut-package-summary-heading">
+          <div>
+            <h3>Package Summary</h3>
 
-      <p>
-        Tổng số scene:{' '}
-        {packageData?.totalScenes || 0}
-      </p>
+            <div className="meta">
+              Media sẵn sàng {availableMediaCount}/{scenes.length}
+            </div>
+          </div>
 
-      <p>
-        Tổng thời lượng:{' '}
-        {packageData?.totalDurationSec || 0}{' '}
-        giây
-      </p>
+          <strong className="capcut-package-percent">
+            {mediaPercent}%
+          </strong>
+        </div>
 
-      <p>
-        Media sẵn sàng:{' '}
-        {availableMediaCount}/
-        {scenes.length}
-      </p>
+        <div className="progress">
+          <div
+            className="progress-fill"
+            style={{ width: `${mediaPercent}%` }}
+          />
+        </div>
 
-      {loading && (
-        <p>Đang chuẩn bị package...</p>
-      )}
+        <div className="capcut-package-metrics">
+          <div>
+            <span>Tổng số scene</span>
+            <strong>{packageData?.totalScenes || 0}</strong>
+          </div>
 
-      {error && (
-        <pre className="error-message">
-          {error}
-        </pre>
-      )}
+          <div>
+            <span>Tổng thời lượng</span>
+            <strong>
+              {packageData?.totalDurationSec || 0} giây
+            </strong>
+          </div>
 
-      {statusMessage && (
-        <p className="success-message">
-          {statusMessage}
-        </p>
-      )}
+          <div>
+            <span>Media sẵn sàng</span>
+            <strong>{availableMediaCount}/{scenes.length}</strong>
+          </div>
+        </div>
+      </section>
 
-      <h2>Package Documents</h2>
+      <div className="capcut-package-messages">
+        {loading && (
+          <div className="meta">Đang chuẩn bị package...</div>
+        )}
 
-      <div className="actions">
-        <button
-          type="button"
-          onClick={onDownloadManifest}
-          disabled={loading}
-        >
-          Tải capcut-manifest.json
-        </button>
+        {error && (
+          <pre className="error-message">{error}</pre>
+        )}
 
-        <button
-          type="button"
-          onClick={onDownloadTimeline}
-          disabled={loading}
-        >
-          Tải capcut-timeline.csv
-        </button>
-
-        <button
-          type="button"
-          onClick={onDownloadNarration}
-          disabled={loading}
-        >
-          Tải narration.txt
-        </button>
+        {statusMessage && (
+          <div className="saved-status">{statusMessage}</div>
+        )}
       </div>
 
-      <h2>Media Files</h2>
+      <section className="capcut-package-panel capcut-package-documents">
+        <h3>Package Documents</h3>
 
-      {scenes.map(scene => {
-        const asset =
-          assetsById[scene.assetId]
-
-        return (
-          <article
-            key={scene.sceneId}
-            className="card"
+        <div className="capcut-package-document-grid">
+          <button
+            type="button"
+            className="capcut-package-document"
+            onClick={onDownloadManifest}
+            disabled={loading}
           >
-            <h3>
-              Scene {scene.sceneNumber}
-            </h3>
+            <strong>capcut-manifest.json</strong>
+            <span>Thông tin package và scene</span>
+          </button>
 
-            <p>
-              <strong>
-                Loại media:
-              </strong>{' '}
-              {scene.mediaType}
-            </p>
+          <button
+            type="button"
+            className="capcut-package-document"
+            onClick={onDownloadTimeline}
+            disabled={loading}
+          >
+            <strong>capcut-timeline.csv</strong>
+            <span>Mốc thời gian dựng video</span>
+          </button>
 
-            <p>
-              <strong>
-                File nguồn:
-              </strong>{' '}
-              {scene.sourceFileName ||
-                'Chưa có'}
-            </p>
+          <button
+            type="button"
+            className="capcut-package-document"
+            onClick={onDownloadNarration}
+            disabled={loading}
+          >
+            <strong>narration.txt</strong>
+            <span>Lời đọc theo thứ tự scene</span>
+          </button>
+        </div>
+      </section>
 
-            <p>
-              <strong>
-                Tên file trong package:
-              </strong>{' '}
-              {scene.outputFileName}
-            </p>
+      <section className="capcut-package-panel capcut-package-scenes">
+        <h3>Media Files</h3>
 
-            <p>
-              <strong>
-                Timeline:
-              </strong>{' '}
-              {scene.startSec}s →{' '}
-              {scene.endSec}s
-            </p>
+        {scenes.length === 0 && (
+          <div className="error-message">
+            Package chưa có scene.
+          </div>
+        )}
 
-            <p>
-              <strong>
-                Thời lượng:
-              </strong>{' '}
-              {scene.durationSec} giây
-            </p>
+        {scenes.map(scene => {
+          const asset = assetsById[scene.assetId]
 
-            <p>
-              <strong>
-                Narration:
-              </strong>
-            </p>
-
-            <p>
-              {scene.narration ||
-                'Không có narration.'}
-            </p>
-
-            {asset?.previewUrl && (
-              <img
-                src={asset.previewUrl}
-                alt={`Scene ${scene.sceneNumber}`}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  maxWidth: '480px',
-                  maxHeight: '320px',
-                  objectFit: 'contain',
-                  marginTop: '12px',
-                  marginBottom: '12px',
-                  borderRadius: '8px'
-                }}
-              />
-            )}
-
-            <button
-              type="button"
-              onClick={() =>
-                onDownloadMedia?.(
-                  scene
-                )
-              }
-              disabled={
-                loading || !asset
-              }
+          return (
+            <article
+              key={scene.sceneId}
+              className={`capcut-package-scene-card${
+                asset ? ' is-ready' : ''
+              }`}
             >
-              Tải {scene.outputFileName}
-            </button>
+              <div className="capcut-package-scene-heading">
+                <h4>Scene {scene.sceneNumber}</h4>
 
-            {!asset && (
-              <p className="error-message">
-                Không tìm thấy file media trong
-                Image Library.
-              </p>
-            )}
-          </article>
-        )
-      })}
+                <span
+                  className={`capcut-package-status${
+                    asset ? ' is-ready' : ''
+                  }`}
+                >
+                  {asset ? 'Media sẵn sàng' : 'Thiếu media'}
+                </span>
+              </div>
 
-      <div className="actions">
+              {asset?.previewUrl ? (
+                <figure className="capcut-package-preview">
+                  <img
+                    src={asset.previewUrl}
+                    alt={`Scene ${scene.sceneNumber}`}
+                  />
+                </figure>
+              ) : (
+                <div className="capcut-package-empty-preview">
+                  Không tìm thấy file media trong Image Library.
+                </div>
+              )}
+
+              <dl className="capcut-package-details">
+                <div>
+                  <dt>Loại media</dt>
+                  <dd>{scene.mediaType}</dd>
+                </div>
+                <div>
+                  <dt>File nguồn</dt>
+                  <dd>{scene.sourceFileName || 'Chưa có'}</dd>
+                </div>
+                <div>
+                  <dt>File trong package</dt>
+                  <dd>{scene.outputFileName}</dd>
+                </div>
+                <div>
+                  <dt>Timeline</dt>
+                  <dd>{scene.startSec}s → {scene.endSec}s</dd>
+                </div>
+                <div>
+                  <dt>Thời lượng</dt>
+                  <dd>{scene.durationSec} giây</dd>
+                </div>
+              </dl>
+
+              <div className="field-group">
+                <label>Narration</label>
+                <div className="preview-box">
+                  {scene.narration || 'Không có narration.'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={() => onDownloadMedia?.(scene)}
+                disabled={loading || !asset}
+              >
+                Tải {scene.outputFileName}
+              </button>
+            </article>
+          )
+        })}
+      </section>
+
+      <div className="capcut-package-footer brief-actions">
         <button
           type="button"
-          className="primary"
+          className="btn primary"
           onClick={
             onCompleteCapCutPackage
           }
@@ -230,6 +249,7 @@ export default function CapCutPackageView({
 
         <button
           type="button"
+          className="btn ghost"
           onClick={
             onBackToImageLibrary
           }
@@ -239,6 +259,7 @@ export default function CapCutPackageView({
 
         <button
           type="button"
+          className="btn ghost"
           onClick={onBackToDashboard}
         >
           Về Dashboard

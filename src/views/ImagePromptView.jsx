@@ -181,7 +181,7 @@ const [saveStatus, setSaveStatus] = useState(
 
   return (
     <div className="image-prompt-view">
-      <div className="project-info">
+      <div className="project-info image-prompt-header">
         <h2>{project?.topic || 'Image Prompt'}</h2>
 
         <div className="meta">
@@ -193,7 +193,7 @@ const [saveStatus, setSaveStatus] = useState(
         </div>
       </div>
 
-      <div className="image-prompt-summary">
+      <div className="image-prompt-panel image-prompt-summary">
         <h3>Storyboard Summary</h3>
 
         <div className="meta">
@@ -205,7 +205,7 @@ const [saveStatus, setSaveStatus] = useState(
         </div>
       </div>
 
-      <div className="image-prompt-scenes">
+      <div className="image-prompt-panel image-prompt-scenes">
         <h3>Storyboard Scenes</h3>
 
         {scenes.length === 0 && (

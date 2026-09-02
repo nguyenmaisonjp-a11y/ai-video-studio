@@ -80,7 +80,7 @@ const [copyStatus, setCopyStatus] = useState('')
 
   return (
     <div className="gemini-flow-view">
-      <div className="project-info">
+      <div className="project-info gemini-flow-header">
         <h2>{project?.topic || 'Gemini Flow'}</h2>
 
         <div className="meta">
@@ -92,12 +92,19 @@ const [copyStatus, setCopyStatus] = useState('')
         </div>
       </div>
 
-      <section className="gemini-flow-summary">
-        <h3>Image Generation Progress</h3>
+      <section className="gemini-flow-panel gemini-flow-summary">
+        <div className="gemini-flow-summary-heading">
+          <div>
+            <h3>Image Generation Progress</h3>
 
-        <div className="meta">
-          Đã ghi nhận {progress.completed}/{progress.total} ảnh
-          · {progress.percent}%
+            <div className="meta">
+              Đã ghi nhận {progress.completed}/{progress.total} ảnh
+            </div>
+          </div>
+
+          <strong className="gemini-flow-percent">
+            {progress.percent}%
+          </strong>
         </div>
 
         <div className="progress">
@@ -125,7 +132,7 @@ const [copyStatus, setCopyStatus] = useState('')
         </div>
       )}
 
-      <section className="gemini-flow-scenes">
+      <section className="gemini-flow-panel gemini-flow-scenes">
         <h3>Scenes</h3>
 
         {scenes.length === 0 && (
@@ -146,12 +153,24 @@ const [copyStatus, setCopyStatus] = useState('')
           return (
             <article
               key={scene.sceneId}
-              className="gemini-flow-scene-card"
+              className={`gemini-flow-scene-card${
+                completed ? ' is-complete' : ''
+              }`}
             >
-              <h4>
-                Scene {scene.sceneNumber}
-                {scene.title ? ` — ${scene.title}` : ''}
-              </h4>
+              <div className="gemini-flow-scene-heading">
+                <h4>
+                  Scene {scene.sceneNumber}
+                  {scene.title ? ` — ${scene.title}` : ''}
+                </h4>
+
+                <span
+                  className={`gemini-flow-status${
+                    completed ? ' is-complete' : ''
+                  }`}
+                >
+                  {completed ? 'Đã tạo ảnh' : 'Chưa tạo ảnh'}
+                </span>
+              </div>
 
               <div className="field-group">
                 <label>Saved Image Prompt</label>
@@ -173,15 +192,14 @@ const [copyStatus, setCopyStatus] = useState('')
                 </div>
               )}
 
-              <div className="meta">
-                Aspect ratio: {scene.aspectRatio || '16:9'}
-              </div>
+              <div className="gemini-flow-scene-meta">
+                <span>
+                  Aspect ratio: {scene.aspectRatio || '16:9'}
+                </span>
 
-              <div className="meta">
-                Trạng thái:{' '}
-                {completed
-                  ? 'Đã tạo ảnh'
-                  : 'Chưa tạo ảnh'}
+                {image.fileName && (
+                  <span>File: {image.fileName}</span>
+                )}
               </div>
 
               <div className="brief-actions">
@@ -232,7 +250,7 @@ const [copyStatus, setCopyStatus] = useState('')
         })}
       </section>
 
-      <div className="brief-actions">
+      <div className="gemini-flow-footer brief-actions">
         <button
           className="btn primary"
           disabled={
